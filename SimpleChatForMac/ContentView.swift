@@ -39,8 +39,9 @@ struct HomeView: View {
                                         .opacity(vm.currentIndex == chatIndex ? 1 : 0)
                                 })
                                 .onTapGesture {
-                                    withAnimation {
+                                    DispatchQueue.main.async {
                                         vm.currentIndex = chatIndex
+                                        print("当前选中索引：\(vm.currentIndex)")
                                     }
                                 }
                         }
@@ -56,7 +57,7 @@ struct HomeView: View {
                 ScrollViewReader { proxy in
                     ScrollView(showsIndicators: false) {
                         VStack(alignment: .trailing, spacing: 20) {
-                            ForEach(vm.chats[vm.currentIndex].messages) { message in
+                            ForEach(vm.getCurChatMessages()) { message in
                                 HStack {
                                     if message.role == .user {
                                         Spacer()
@@ -75,11 +76,20 @@ struct HomeView: View {
                         .padding()
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         .onAppear {
-                            proxy.scrollTo(vm.chats[vm.currentIndex].messages.last?.id, anchor: .bottom)
+                            DispatchQueue.main.async {
+                                proxy.scrollTo(vm.getCurChatMessages().last?.id, anchor: .bottom)
+                            }
                         }
-                        .onChange(of: vm.chats[vm.currentIndex].messages.count) { oldValue, newValue in
-                            withAnimation {
-                                proxy.scrollTo(vm.chats[vm.currentIndex].messages.last?.id, anchor: .bottom)
+                        .onChange(of: vm.getCurChatMessages().count) { _, _ in
+                            DispatchQueue.main.async {
+                                print("当前消息数量变化")
+                                proxy.scrollTo(vm.getCurChatMessages().last?.id, anchor: .bottom)
+                            }
+                        }
+                        .onChange(of: vm.currentIndex) { _, _ in
+                            DispatchQueue.main.async {
+                                print("当前选中索引变化")
+                                proxy.scrollTo(vm.getCurChatMessages().last?.id, anchor: .bottom)
                             }
                         }
                     }
@@ -88,14 +98,14 @@ struct HomeView: View {
                 HStack {
                     TextField("发送消息", text: $inputText)
                         .onAppear {
-                            inputText = vm.chats[vm.currentIndex].title
+                            inputText = vm.getCurChat().title
                         }
                         .onChange(of: vm.currentIndex) { oldValue, newValue in
-                            inputText = vm.chats[vm.currentIndex].title
+                            inputText = vm.getCurChat().title
                         }
                     Button(action: {
                         if inputText.isEmpty { return }
-                        vm.chats[vm.currentIndex].messages.append(Message(content: inputText))
+                        vm.sendMessage(inputText: inputText)
                     }, label: {
                         Text("发送")
                     })
@@ -120,17 +130,29 @@ class ViewModel: ObservableObject {
         ),
         Chat(
             title: "黄蓉",
-            messages: (0..<30).map({ Message(content: "黄蓉\($0)") })
+            messages: (0..<20).map({ Message(content: "黄蓉\($0)") })
         ),
         Chat(
             title: "杨康",
-            messages: (0..<40).map({ Message(content: "杨康\($0)") })
+            messages: (0..<20).map({ Message(content: "杨康\($0)") })
         ),
         Chat(
             title: "穆念慈",
-            messages: (0..<50).map({ Message(content: "穆念慈\($0)") })
+            messages: (0..<20).map({ Message(content: "穆念慈\($0)") })
         ),
     ]
+    
+    func getCurChatMessages() -> [Message] {
+        return chats[currentIndex].messages
+    }
+    
+    func getCurChat() -> Chat {
+        return chats[currentIndex]
+    }
+    
+    func sendMessage(inputText: String) {
+        self.chats[self.currentIndex].messages.append(Message(content: inputText))
+    }
 }
 
 struct Chat: Identifiable {
