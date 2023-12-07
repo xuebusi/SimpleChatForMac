@@ -98,10 +98,10 @@ struct HomeView: View {
                 HStack {
                     TextField("发送消息", text: $inputText)
                         .onAppear {
-                            inputText = vm.getCurChat().title
+                            inputText = vm.getCurChat()?.title ?? ""
                         }
                         .onChange(of: vm.currentIndex) { oldValue, newValue in
-                            inputText = vm.getCurChat().title
+                            inputText = vm.getCurChat()?.title ?? ""
                         }
                     Button(action: {
                         if inputText.isEmpty { return }
@@ -125,7 +125,11 @@ struct HomeView: View {
 }
 
 class ViewModel: ObservableObject {
-    @Published var currentIndex: Int = 0
+    @Published var currentIndex: Int = UserDefaults.standard.integer(forKey: "currentIndex") {
+        didSet {
+            UserDefaults.standard.set(currentIndex, forKey: "currentIndex")
+        }
+    }
     @Published var chats: [Chat] = [
         Chat(
             title: "郭靖",
@@ -148,19 +152,25 @@ class ViewModel: ObservableObject {
     let apiService = ApiService()
     
     func getCurChatMessages() -> [Message] {
+        if currentIndex < 0 || currentIndex >= chats.count { return [] }
         return chats[currentIndex].messages
     }
     
-    func getCurChat() -> Chat {
+    func getCurChat() -> Chat? {
+        if currentIndex < 0 || currentIndex >= chats.count { return nil }
         return chats[currentIndex]
     }
     
     func sendMessage(inputText: String) {
-        self.chats[self.currentIndex].messages.append(Message(content: inputText))
+        if currentIndex < 0 || currentIndex >= chats.count { return }
+        chats[currentIndex].messages.append(Message(content: inputText))
     }
     
     // 模拟发送异步消息
     func sendMessageAsync(messageText: String, chatIndex: Int) async {
+        
+        if chatIndex < 0 || chatIndex >= chats.count { return }
+        
         await MainActor.run {
             self.chats[chatIndex].messages.append(Message(content: messageText))
         }
