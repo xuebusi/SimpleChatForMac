@@ -105,7 +105,10 @@ struct HomeView: View {
                         }
                     Button(action: {
                         if inputText.isEmpty { return }
-                        vm.sendMessage(inputText: inputText)
+                        //vm.sendMessage(inputText: inputText)
+                        Task {
+                            await vm.sendMessageAsync(messageText: inputText, chatIndex: vm.currentIndex)
+                        }
                     }, label: {
                         Text("发送")
                     })
@@ -142,6 +145,8 @@ class ViewModel: ObservableObject {
         ),
     ]
     
+    let apiService = ApiService()
+    
     func getCurChatMessages() -> [Message] {
         return chats[currentIndex].messages
     }
@@ -152,6 +157,20 @@ class ViewModel: ObservableObject {
     
     func sendMessage(inputText: String) {
         self.chats[self.currentIndex].messages.append(Message(content: inputText))
+    }
+    
+    // 模拟发送异步消息
+    func sendMessageAsync(messageText: String, chatIndex: Int) async {
+        let result = await apiService.sendMessage(messageText: messageText)
+        
+        switch result {
+        case .success(let reply):
+            DispatchQueue.main.async {
+                self.chats[chatIndex].messages.append(Message(content: reply))
+            }
+        case .failure(let error):
+            print(error.localizedDescription)
+        }
     }
 }
 
@@ -171,3 +190,19 @@ enum Role: CaseIterable {
     case user
     case assistant
 }
+
+/// --------------------------------------------------------
+/// 模拟API请求
+/// --------------------------------------------------------
+
+class ApiService {
+    
+    // 模拟回复消息
+    func sendMessage(messageText: String) async -> Result<String, Error> {
+        try? await Task.sleep(nanoseconds: 5 * 1_000_000_000)
+        return .success("OK-\(Int.random(in: 0...999999))")
+    }
+}
+
+
+/// --------------------------------------------------------
