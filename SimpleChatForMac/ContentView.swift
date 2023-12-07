@@ -161,11 +161,15 @@ class ViewModel: ObservableObject {
     
     // 模拟发送异步消息
     func sendMessageAsync(messageText: String, chatIndex: Int) async {
+        await MainActor.run {
+            self.chats[chatIndex].messages.append(Message(content: messageText))
+        }
+        
         let result = await apiService.sendMessage(messageText: messageText)
         
         switch result {
         case .success(let reply):
-            DispatchQueue.main.async {
+            await MainActor.run {
                 self.chats[chatIndex].messages.append(Message(content: reply))
             }
         case .failure(let error):
@@ -200,7 +204,7 @@ class ApiService {
     // 模拟回复消息
     func sendMessage(messageText: String) async -> Result<String, Error> {
         try? await Task.sleep(nanoseconds: 5 * 1_000_000_000)
-        return .success("OK-\(Int.random(in: 0...999999))")
+        return .success("回复[\(messageText)]：\(Int.random(in: 0...999999))")
     }
 }
 
