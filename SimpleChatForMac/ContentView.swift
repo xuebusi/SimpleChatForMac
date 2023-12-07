@@ -31,20 +31,23 @@ struct HomeView: View {
                             Text("\(vm.chats[chatIndex].title)(\(vm.chats[chatIndex].messages.count)条)")
                                 .padding(.vertical)
                                 .frame(maxWidth: .infinity)
-                                .background(vm.currentIndex == chatIndex ? Color.accentColor.opacity(0.1) : Color(.systemGray).opacity(0.1))
+                                .background(vm.currentChatID == vm.chats[chatIndex].id ? Color.accentColor.opacity(0.1) : Color(.systemGray).opacity(0.1))
                                 .overlay(alignment: .leading, content: {
                                     Rectangle()
                                         .fill(Color.accentColor)
                                         .frame(width: 4)
-                                        .opacity(vm.currentIndex == chatIndex ? 1 : 0)
+                                        .opacity(vm.currentChatID == vm.chats[chatIndex].id ? 1 : 0)
                                 })
                                 .onTapGesture {
                                     DispatchQueue.main.async {
-                                        vm.currentIndex = chatIndex
-                                        print("当前选中索引：\(vm.currentIndex)")
+                                        vm.currentChatID = vm.chats[chatIndex].id
+                                        print("当前选中聊天ID：\(String(describing: vm.currentChatID))")
                                     }
                                 }
                         }
+                    }
+                    .onAppear {
+                        print("\(String(describing: vm.currentChatID))")
                     }
                 }
             }
@@ -86,7 +89,7 @@ struct HomeView: View {
                                 proxy.scrollTo(vm.getCurChatMessages().last?.id, anchor: .bottom)
                             }
                         }
-                        .onChange(of: vm.currentIndex) { _, _ in
+                        .onChange(of: vm.currentChatID) { _, _ in
                             DispatchQueue.main.async {
                                 print("当前选中索引变化")
                                 proxy.scrollTo(vm.getCurChatMessages().last?.id, anchor: .bottom)
@@ -100,14 +103,17 @@ struct HomeView: View {
                         .onAppear {
                             inputText = vm.getCurChat()?.title ?? ""
                         }
-                        .onChange(of: vm.currentIndex) { oldValue, newValue in
+                        .onChange(of: vm.currentChatID) { oldValue, newValue in
                             inputText = vm.getCurChat()?.title ?? ""
                         }
                     Button(action: {
-                        if inputText.isEmpty { return }
+                        if inputText.isEmpty {
+                            print("消息不能为空")
+                            return
+                        }
                         //vm.sendMessage(inputText: inputText)
                         Task {
-                            await vm.sendMessageAsync(messageText: inputText, chatIndex: vm.currentIndex)
+                            await vm.sendMessageAsync(messageText: inputText)
                         }
                     }, label: {
                         Text("发送")
@@ -125,54 +131,54 @@ struct HomeView: View {
 }
 
 class ViewModel: ObservableObject {
-    @Published var currentIndex: Int = UserDefaults.standard.integer(forKey: "currentIndex") {
-        didSet {
-            UserDefaults.standard.set(currentIndex, forKey: "currentIndex")
-        }
-    }
+    @Published var currentChatID: String? = ""
     @Published var chats: [Chat] = [
         Chat(
             title: "郭靖",
-            messages: (0..<20).map({ Message(content: "郭靖\($0)") })
+            messages: (0..<1).map({ Message(content: "郭靖\($0)", role: .user) })
         ),
         Chat(
             title: "黄蓉",
-            messages: (0..<20).map({ Message(content: "黄蓉\($0)") })
+            messages: (0..<1).map({ Message(content: "黄蓉\($0)", role: .user) })
         ),
         Chat(
             title: "杨康",
-            messages: (0..<20).map({ Message(content: "杨康\($0)") })
+            messages: (0..<1).map({ Message(content: "杨康\($0)", role: .user) })
         ),
         Chat(
             title: "穆念慈",
-            messages: (0..<20).map({ Message(content: "穆念慈\($0)") })
+            messages: (0..<1).map({ Message(content: "穆念慈\($0)", role: .user) })
         ),
     ]
     
     let apiService = ApiService()
     
     func getCurChatMessages() -> [Message] {
-        if currentIndex < 0 || currentIndex >= chats.count { return [] }
-        return chats[currentIndex].messages
+        if let index = chats.firstIndex(where: {$0.id == currentChatID}) {
+            return chats[index].messages
+        } else {
+            return []
+        }
     }
     
     func getCurChat() -> Chat? {
-        if currentIndex < 0 || currentIndex >= chats.count { return nil }
-        return chats[currentIndex]
-    }
-    
-    func sendMessage(inputText: String) {
-        if currentIndex < 0 || currentIndex >= chats.count { return }
-        chats[currentIndex].messages.append(Message(content: inputText))
+        if let index = chats.firstIndex(where: {$0.id == currentChatID}) {
+            return chats[index]
+        } else {
+            return nil
+        }
     }
     
     // 模拟发送异步消息
-    func sendMessageAsync(messageText: String, chatIndex: Int) async {
+    func sendMessageAsync(messageText: String) async {
         
-        if chatIndex < 0 || chatIndex >= chats.count { return }
+        guard let chatIndex = chats.firstIndex(where: {$0.id == currentChatID}) else {
+            print("聊天对象不存在")
+            return
+        }
         
         await MainActor.run {
-            self.chats[chatIndex].messages.append(Message(content: messageText))
+            self.chats[chatIndex].messages.append(Message(content: messageText, role: .user))
         }
         
         let result = await apiService.sendMessage(messageText: messageText)
@@ -180,7 +186,7 @@ class ViewModel: ObservableObject {
         switch result {
         case .success(let reply):
             await MainActor.run {
-                self.chats[chatIndex].messages.append(Message(content: reply))
+                self.chats[chatIndex].messages.append(Message(content: reply, role: .assistant))
             }
         case .failure(let error):
             print(error.localizedDescription)
@@ -189,15 +195,15 @@ class ViewModel: ObservableObject {
 }
 
 struct Chat: Identifiable {
-    let id: UUID = .init()
+    let id: String = UUID().uuidString
     let title: String
     var messages: [Message]
 }
 
 struct Message: Identifiable {
-    let id: UUID = .init()
+    let id: String = UUID().uuidString
     let content: String
-    let role: Role = Role.allCases.randomElement()!
+    let role: Role
 }
 
 enum Role: CaseIterable {
