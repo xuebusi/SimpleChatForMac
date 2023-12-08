@@ -50,6 +50,18 @@ struct HomeView: View {
                         print("\(String(describing: vm.currentChatID))")
                     }
                 }
+                
+                HStack {
+                    Spacer()
+                    Button {
+                        vm.chats.append(Chat(title: "新的聊天", messages: []))
+                        vm.saveChats()
+                    } label: {
+                        Text("新建聊天")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.accentColor)
+                }
             }
             .padding()
             .frame(width: 200)
@@ -131,25 +143,54 @@ struct HomeView: View {
 }
 
 class ViewModel: ObservableObject {
-    @Published var currentChatID: String? = ""
-    @Published var chats: [Chat] = [
-        Chat(
-            title: "郭靖",
-            messages: (0..<1).map({ Message(content: "郭靖\($0)", role: .user) })
-        ),
-        Chat(
-            title: "黄蓉",
-            messages: (0..<1).map({ Message(content: "黄蓉\($0)", role: .user) })
-        ),
-        Chat(
-            title: "杨康",
-            messages: (0..<1).map({ Message(content: "杨康\($0)", role: .user) })
-        ),
-        Chat(
-            title: "穆念慈",
-            messages: (0..<1).map({ Message(content: "穆念慈\($0)", role: .user) })
-        ),
-    ]
+    @Published var currentChatID: String? = UserDefaults.standard.string(forKey: "currentChatID") {
+        didSet {
+            UserDefaults.standard.set(currentChatID, forKey: "currentChatID")
+            print("更新当前选中的聊天对象成功！\(String(describing: currentChatID))")
+        }
+    }
+    @Published var chats: [Chat] = [] {
+        didSet {
+            saveChats()
+        }
+    }
+    
+//    @Published var chats: [Chat] = [
+//        Chat(
+//            title: "郭靖",
+//            messages: (0..<1).map({ Message(content: "郭靖\($0)", role: .user) })
+//        ),
+//        Chat(
+//            title: "黄蓉",
+//            messages: (0..<1).map({ Message(content: "黄蓉\($0)", role: .user) })
+//        ),
+//        Chat(
+//            title: "杨康",
+//            messages: (0..<1).map({ Message(content: "杨康\($0)", role: .user) })
+//        ),
+//        Chat(
+//            title: "穆念慈",
+//            messages: (0..<1).map({ Message(content: "穆念慈\($0)", role: .user) })
+//        ),
+//    ]
+    
+    init() {
+        loadChats()
+    }
+    
+    func loadChats() {
+        if let data = UserDefaults.standard.data(forKey: "chats"),
+           let decodedData = try? JSONDecoder().decode([Chat].self, from: data) {
+            chats = decodedData
+        }
+    }
+    
+    func saveChats() {
+        if let encodedData = try? JSONEncoder().encode(chats) {
+            UserDefaults.standard.setValue(encodedData, forKey: "chats")
+            print("保存聊天记录成功:\(chats)")
+        }
+    }
     
     let apiService = ApiService()
     
@@ -194,19 +235,19 @@ class ViewModel: ObservableObject {
     }
 }
 
-struct Chat: Identifiable {
-    let id: String = UUID().uuidString
-    let title: String
+struct Chat: Identifiable, Codable {
+    var id: String = UUID().uuidString
+    var title: String
     var messages: [Message]
 }
 
-struct Message: Identifiable {
-    let id: String = UUID().uuidString
+struct Message: Identifiable, Codable {
+    var id: String = UUID().uuidString
     let content: String
     let role: Role
 }
 
-enum Role: CaseIterable {
+enum Role: CaseIterable, Codable {
     case user
     case assistant
 }
