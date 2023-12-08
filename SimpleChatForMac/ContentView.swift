@@ -25,36 +25,49 @@ struct HomeView: View {
     var body: some View {
         HStack {
             VStack {
-                ScrollView {
-                    VStack(spacing: 16) {
-                        ForEach(vm.chats.indices, id: \.self) { chatIndex in
-                            Text("\(vm.chats[chatIndex].title)(\(vm.chats[chatIndex].messages.count)条)")
-                                .padding(.vertical)
-                                .frame(maxWidth: .infinity)
-                                .background(vm.currentChatID == vm.chats[chatIndex].id ? Color.accentColor.opacity(0.1) : Color(.systemGray).opacity(0.1))
-                                .overlay(alignment: .leading, content: {
-                                    Rectangle()
-                                        .fill(Color.accentColor)
-                                        .frame(width: 4)
-                                        .opacity(vm.currentChatID == vm.chats[chatIndex].id ? 1 : 0)
-                                })
-                                .onTapGesture {
-                                    DispatchQueue.main.async {
-                                        vm.currentChatID = vm.chats[chatIndex].id
-                                        print("当前选中聊天ID：\(String(describing: vm.currentChatID))")
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            ForEach(vm.chats.indices, id: \.self) { chatIndex in
+                                Text("\(vm.chats[chatIndex].title)(\(vm.chats[chatIndex].messages.count)条)")
+                                    .padding(.vertical)
+                                    .frame(maxWidth: .infinity)
+                                    .background(vm.selectedChat?.id == vm.chats[chatIndex].id ? Color.accentColor.opacity(0.1) : Color(.systemGray).opacity(0.1))
+                                    .id(vm.chats[chatIndex].id)
+                                    .overlay(alignment: .leading, content: {
+                                        Rectangle()
+                                            .fill(Color.accentColor)
+                                            .frame(width: 4)
+                                            .opacity(vm.selectedChat?.id == vm.chats[chatIndex].id ? 1 : 0)
+                                    })
+                                    .onTapGesture {
+                                        DispatchQueue.main.async {
+                                            vm.selectedChat = vm.chats[chatIndex]
+                                            print("当前选中聊天ID：\(String(describing: vm.selectedChat?.id))")
+                                        }
                                     }
-                                }
+                            }
                         }
-                    }
-                    .onAppear {
-                        print("\(String(describing: vm.currentChatID))")
+                        .onAppear {
+                            DispatchQueue.main.async {
+                                proxy.scrollTo(vm.selectedChat?.id, anchor: .top)
+                            }
+                        }
+                        .onChange(of: vm.chats.count) { oldValue, newValue in
+                            if newValue > oldValue {
+                                DispatchQueue.main.async {
+                                    proxy.scrollTo(vm.selectedChat?.id, anchor: .bottom)
+                                }
+                            }
+                        }
                     }
                 }
                 
                 HStack {
                     Spacer()
                     Button {
-                        vm.chats.append(Chat(title: "新的聊天", messages: []))
+                        vm.chats.insert(Chat(title: "新的聊天", messages: []), at: 0)
+                        vm.selectedChat = vm.chats[0]
                         vm.saveChats()
                     } label: {
                         Text("新建聊天")
@@ -101,7 +114,7 @@ struct HomeView: View {
                                 proxy.scrollTo(vm.getCurChatMessages().last?.id, anchor: .bottom)
                             }
                         }
-                        .onChange(of: vm.currentChatID) { _, _ in
+                        .onChange(of: vm.selectedChat?.id) { _, _ in
                             DispatchQueue.main.async {
                                 print("当前选中索引变化")
                                 proxy.scrollTo(vm.getCurChatMessages().last?.id, anchor: .bottom)
@@ -115,7 +128,7 @@ struct HomeView: View {
                         .onAppear {
                             inputText = vm.getCurChat()?.title ?? ""
                         }
-                        .onChange(of: vm.currentChatID) { oldValue, newValue in
+                        .onChange(of: vm.selectedChat?.id) { oldValue, newValue in
                             inputText = vm.getCurChat()?.title ?? ""
                         }
                     Button(action: {
@@ -143,39 +156,61 @@ struct HomeView: View {
 }
 
 class ViewModel: ObservableObject {
-    @Published var currentChatID: String? = UserDefaults.standard.string(forKey: "currentChatID") {
+    @Published var selectedChat: Chat? {
         didSet {
-            UserDefaults.standard.set(currentChatID, forKey: "currentChatID")
-            print("更新当前选中的聊天对象成功！\(String(describing: currentChatID))")
+            saveSelectedChat()
         }
     }
+    
+//    @Published var currentChatID: String? = UserDefaults.standard.string(forKey: "currentChatID") {
+//        didSet {
+//            UserDefaults.standard.set(currentChatID, forKey: "currentChatID")
+//            print("更新当前选中的聊天对象成功！\(String(describing: currentChatID))")
+//        }
+//    }
+    
     @Published var chats: [Chat] = [] {
         didSet {
             saveChats()
         }
     }
     
-//    @Published var chats: [Chat] = [
-//        Chat(
-//            title: "郭靖",
-//            messages: (0..<1).map({ Message(content: "郭靖\($0)", role: .user) })
-//        ),
-//        Chat(
-//            title: "黄蓉",
-//            messages: (0..<1).map({ Message(content: "黄蓉\($0)", role: .user) })
-//        ),
-//        Chat(
-//            title: "杨康",
-//            messages: (0..<1).map({ Message(content: "杨康\($0)", role: .user) })
-//        ),
-//        Chat(
-//            title: "穆念慈",
-//            messages: (0..<1).map({ Message(content: "穆念慈\($0)", role: .user) })
-//        ),
-//    ]
+    //    @Published var chats: [Chat] = [
+    //        Chat(
+    //            title: "郭靖",
+    //            messages: (0..<1).map({ Message(content: "郭靖\($0)", role: .user) })
+    //        ),
+    //        Chat(
+    //            title: "黄蓉",
+    //            messages: (0..<1).map({ Message(content: "黄蓉\($0)", role: .user) })
+    //        ),
+    //        Chat(
+    //            title: "杨康",
+    //            messages: (0..<1).map({ Message(content: "杨康\($0)", role: .user) })
+    //        ),
+    //        Chat(
+    //            title: "穆念慈",
+    //            messages: (0..<1).map({ Message(content: "穆念慈\($0)", role: .user) })
+    //        ),
+    //    ]
     
     init() {
         loadChats()
+        loadSelectedChat()
+    }
+    
+    func loadSelectedChat() {
+        if let data = UserDefaults.standard.data(forKey: "selectedChat"),
+           let decodedData = try? JSONDecoder().decode(Chat.self, from: data) {
+            selectedChat = decodedData
+        }
+    }
+    
+    func saveSelectedChat() {
+        if let encodedData = try? JSONEncoder().encode(selectedChat) {
+            UserDefaults.standard.setValue(encodedData, forKey: "selectedChat")
+            print("保存当前所选聊天对象成功:\(String(describing: selectedChat?.id))")
+        }
     }
     
     func loadChats() {
@@ -188,14 +223,14 @@ class ViewModel: ObservableObject {
     func saveChats() {
         if let encodedData = try? JSONEncoder().encode(chats) {
             UserDefaults.standard.setValue(encodedData, forKey: "chats")
-            print("保存聊天记录成功:\(chats)")
+            print("保存聊天记录成功!")
         }
     }
     
     let apiService = ApiService()
     
     func getCurChatMessages() -> [Message] {
-        if let index = chats.firstIndex(where: {$0.id == currentChatID}) {
+        if let index = chats.firstIndex(where: {$0.id == selectedChat?.id}) {
             return chats[index].messages
         } else {
             return []
@@ -203,7 +238,7 @@ class ViewModel: ObservableObject {
     }
     
     func getCurChat() -> Chat? {
-        if let index = chats.firstIndex(where: {$0.id == currentChatID}) {
+        if let index = chats.firstIndex(where: {$0.id == selectedChat?.id}) {
             return chats[index]
         } else {
             return nil
@@ -213,7 +248,7 @@ class ViewModel: ObservableObject {
     // 模拟发送异步消息
     func sendMessageAsync(messageText: String) async {
         
-        guard let chatIndex = chats.firstIndex(where: {$0.id == currentChatID}) else {
+        guard let chatIndex = chats.firstIndex(where: {$0.id == selectedChat?.id}) else {
             print("聊天对象不存在")
             return
         }
@@ -235,13 +270,13 @@ class ViewModel: ObservableObject {
     }
 }
 
-struct Chat: Identifiable, Codable {
+struct Chat: Identifiable, Codable, Equatable {
     var id: String = UUID().uuidString
     var title: String
     var messages: [Message]
 }
 
-struct Message: Identifiable, Codable {
+struct Message: Identifiable, Codable, Equatable {
     var id: String = UUID().uuidString
     let content: String
     let role: Role
