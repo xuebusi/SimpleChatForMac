@@ -46,6 +46,21 @@ struct HomeView: View {
                                             print("当前选中聊天ID：\(String(describing: vm.selectedChat?.id))")
                                         }
                                     }
+                                    .contextMenu {
+                                        VStack {
+                                            Button {
+                                                withAnimation {
+                                                    vm.removeChat(chat: vm.chats[chatIndex])
+                                                }
+                                            } label: {
+                                                HStack {
+                                                    Image(systemName: "trash")
+                                                        .foregroundColor(.red)
+                                                    Text("删除")
+                                                }
+                                            }
+                                        }
+                                    }
                             }
                         }
                         .onAppear {
@@ -162,12 +177,12 @@ class ViewModel: ObservableObject {
         }
     }
     
-//    @Published var currentChatID: String? = UserDefaults.standard.string(forKey: "currentChatID") {
-//        didSet {
-//            UserDefaults.standard.set(currentChatID, forKey: "currentChatID")
-//            print("更新当前选中的聊天对象成功！\(String(describing: currentChatID))")
-//        }
-//    }
+    //    @Published var currentChatID: String? = UserDefaults.standard.string(forKey: "currentChatID") {
+    //        didSet {
+    //            UserDefaults.standard.set(currentChatID, forKey: "currentChatID")
+    //            print("更新当前选中的聊天对象成功！\(String(describing: currentChatID))")
+    //        }
+    //    }
     
     @Published var chats: [Chat] = [] {
         didSet {
@@ -234,6 +249,22 @@ class ViewModel: ObservableObject {
             return chats[index].messages
         } else {
             return []
+        }
+    }
+    
+    // 重命名
+    func renameChat(chatId: String, newName: String) {
+        if let index = chats.firstIndex(where: { $0.id == chatId }) {
+            chats[index].title = newName
+            saveChats()
+        }
+    }
+    
+    // 删除聊天
+    func removeChat(chat: Chat) {
+        if let index = chats.firstIndex(where: { $0.id == chat.id }) {
+            chats.remove(at: index)
+            saveChats()
         }
     }
     
