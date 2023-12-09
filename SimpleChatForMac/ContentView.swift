@@ -10,6 +10,7 @@ import SwiftUI
 struct ContentView: View {
     var body: some View {
         HomeView()
+            .environmentObject(ViewModel())
     }
 }
 
@@ -19,154 +20,170 @@ struct ContentView: View {
 
 
 struct HomeView: View {
-    @StateObject var vm = ViewModel()
-    @State var inputText: String = ""
-    
     var body: some View {
         HStack {
-            VStack {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        VStack(spacing: 16) {
-                            ForEach(vm.chats.indices, id: \.self) { chatIndex in
-                                Text("\(vm.chats[chatIndex].title)(\(vm.chats[chatIndex].messages.count)条)")
-                                    .padding(.vertical)
-                                    .frame(maxWidth: .infinity)
-                                    .background(vm.selectedChat?.id == vm.chats[chatIndex].id ? Color.accentColor.opacity(0.1) : Color(.systemGray).opacity(0.1))
-                                    .id(vm.chats[chatIndex].id)
-                                    .overlay(alignment: .leading, content: {
-                                        Rectangle()
-                                            .fill(Color.accentColor)
-                                            .frame(width: 4)
-                                            .opacity(vm.selectedChat?.id == vm.chats[chatIndex].id ? 1 : 0)
-                                    })
-                                    .onTapGesture {
-                                        DispatchQueue.main.async {
-                                            vm.selectedChat = vm.chats[chatIndex]
-                                            print("当前选中聊天ID：\(String(describing: vm.selectedChat?.id))")
-                                        }
-                                    }
-                                    .contextMenu {
-                                        VStack {
-                                            Button {
-                                                withAnimation {
-                                                    vm.removeChat(chat: vm.chats[chatIndex])
-                                                }
-                                            } label: {
-                                                HStack {
-                                                    Image(systemName: "trash")
-                                                        .foregroundColor(.red)
-                                                    Text("删除")
-                                                }
-                                            }
-                                        }
-                                    }
-                            }
-                        }
-                        .onAppear {
-                            DispatchQueue.main.async {
-                                proxy.scrollTo(vm.selectedChat?.id, anchor: .top)
-                            }
-                        }
-                        .onChange(of: vm.chats.count) { oldValue, newValue in
-                            if newValue > oldValue {
-                                DispatchQueue.main.async {
-                                    proxy.scrollTo(vm.selectedChat?.id, anchor: .bottom)
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                HStack {
-                    Spacer()
-                    Button {
-                        vm.chats.insert(Chat(title: "新的聊天", messages: []), at: 0)
-                        vm.selectedChat = vm.chats[0]
-                        vm.saveChats()
-                    } label: {
-                        Text("新建聊天")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Color.accentColor)
-                }
-            }
-            .padding()
-            .frame(width: 200)
+            SidebarView()
+                .padding()
+                .frame(width: 200)
             
             Divider()
             
-            VStack(spacing: 0) {
-                ScrollViewReader { proxy in
-                    ScrollView(showsIndicators: false) {
-                        VStack(alignment: .trailing, spacing: 20) {
-                            ForEach(vm.getCurChatMessages()) { message in
-                                HStack {
-                                    if message.role == .user {
-                                        Spacer()
-                                    }
-                                    Text(message.content)
-                                        .padding()
-                                        .background(message.role == .user ? Color(.systemGray).opacity(0.1) : Color.accentColor.opacity(0.1))
-                                        .cornerRadius(10)
-                                        .id(message.id)
-                                    if message.role == .assistant {
-                                        Spacer()
+            DetailView()
+                .frame(minWidth: 500)
+        }
+        .frame(minHeight: 460)
+    }
+}
+
+// 侧边栏视图
+struct SidebarView: View {
+    @EnvironmentObject var vm: ViewModel
+    
+    var body: some View {
+        VStack {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 16) {
+                        ForEach(vm.chats.indices, id: \.self) { chatIndex in
+                            Text("\(vm.chats[chatIndex].title)(\(vm.chats[chatIndex].messages.count)条)")
+                                .padding(.vertical)
+                                .frame(maxWidth: .infinity)
+                                .background(vm.selectedChat?.id == vm.chats[chatIndex].id ? Color.accentColor.opacity(0.1) : Color(.systemGray).opacity(0.1))
+                                .id(vm.chats[chatIndex].id)
+                                .overlay(alignment: .leading, content: {
+                                    Rectangle()
+                                        .fill(Color.accentColor)
+                                        .frame(width: 4)
+                                        .opacity(vm.selectedChat?.id == vm.chats[chatIndex].id ? 1 : 0)
+                                })
+                                .onTapGesture {
+                                    DispatchQueue.main.async {
+                                        vm.selectedChat = vm.chats[chatIndex]
+                                        print("当前选中聊天ID：\(String(describing: vm.selectedChat?.id))")
                                     }
                                 }
-                            }
+                                .contextMenu {
+                                    VStack {
+                                        Button {
+                                            withAnimation {
+                                                vm.removeChat(chat: vm.chats[chatIndex])
+                                            }
+                                        } label: {
+                                            HStack {
+                                                Image(systemName: "trash")
+                                                    .foregroundColor(.red)
+                                                Text("删除")
+                                            }
+                                        }
+                                    }
+                                }
                         }
-                        .padding()
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                        .onAppear {
-                            DispatchQueue.main.async {
-                                proxy.scrollTo(vm.getCurChatMessages().last?.id, anchor: .bottom)
-                            }
+                    }
+                    .onAppear {
+                        DispatchQueue.main.async {
+                            proxy.scrollTo(vm.selectedChat?.id, anchor: .top)
                         }
-                        .onChange(of: vm.getCurChatMessages().count) { _, _ in
+                    }
+                    .onChange(of: vm.chats.count) { oldValue, newValue in
+                        if newValue > oldValue {
                             DispatchQueue.main.async {
-                                print("当前消息数量变化")
-                                proxy.scrollTo(vm.getCurChatMessages().last?.id, anchor: .bottom)
-                            }
-                        }
-                        .onChange(of: vm.selectedChat?.id) { _, _ in
-                            DispatchQueue.main.async {
-                                print("当前选中索引变化")
-                                proxy.scrollTo(vm.getCurChatMessages().last?.id, anchor: .bottom)
+                                proxy.scrollTo(vm.selectedChat?.id, anchor: .bottom)
                             }
                         }
                     }
                 }
-                
-                HStack {
-                    TextField("发送消息", text: $inputText)
-                        .onAppear {
-                            inputText = vm.getCurChat()?.title ?? ""
-                        }
-                        .onChange(of: vm.selectedChat?.id) { oldValue, newValue in
-                            inputText = vm.getCurChat()?.title ?? ""
-                        }
-                    Button(action: {
-                        if inputText.isEmpty {
-                            print("消息不能为空")
-                            return
-                        }
-                        //vm.sendMessage(inputText: inputText)
-                        Task {
-                            await vm.sendMessageAsync(messageText: inputText)
-                        }
-                    }, label: {
-                        Text("发送")
-                    })
-                    .buttonStyle(.borderedProminent)
-                    .tint(Color.accentColor)
-                }
-                .padding(.horizontal)
-                .padding(.bottom)
             }
-            .frame(minWidth: 500)
+            
+            HStack {
+                Spacer()
+                Button {
+                    vm.chats.insert(Chat(title: "新的聊天", messages: []), at: 0)
+                    vm.selectedChat = vm.chats[0]
+                    vm.saveChats()
+                } label: {
+                    Text("新建聊天")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color.accentColor)
+            }
         }
-        .frame(minHeight: 460)
+    }
+}
+
+// 详情视图
+struct DetailView: View {
+    @EnvironmentObject var vm: ViewModel
+    @State var inputText: String = ""
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            ScrollViewReader { proxy in
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .trailing, spacing: 20) {
+                        ForEach(vm.getCurChatMessages()) { message in
+                            HStack {
+                                if message.role == .user {
+                                    Spacer()
+                                }
+                                Text(message.content)
+                                    .padding()
+                                    .background(message.role == .user ? Color(.systemGray).opacity(0.1) : Color.accentColor.opacity(0.1))
+                                    .cornerRadius(10)
+                                    .id(message.id)
+                                if message.role == .assistant {
+                                    Spacer()
+                                }
+                            }
+                        }
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .onAppear {
+                        DispatchQueue.main.async {
+                            proxy.scrollTo(vm.getCurChatMessages().last?.id, anchor: .bottom)
+                        }
+                    }
+                    .onChange(of: vm.getCurChatMessages().count) { _, _ in
+                        DispatchQueue.main.async {
+                            print("当前消息数量变化")
+                            proxy.scrollTo(vm.getCurChatMessages().last?.id, anchor: .bottom)
+                        }
+                    }
+                    .onChange(of: vm.selectedChat?.id) { _, _ in
+                        DispatchQueue.main.async {
+                            print("当前选中索引变化")
+                            proxy.scrollTo(vm.getCurChatMessages().last?.id, anchor: .bottom)
+                        }
+                    }
+                }
+            }
+            
+            HStack {
+                TextField("发送消息", text: $inputText)
+                    .onAppear {
+                        inputText = vm.getCurChat()?.title ?? ""
+                    }
+                    .onChange(of: vm.selectedChat?.id) { oldValue, newValue in
+                        inputText = vm.getCurChat()?.title ?? ""
+                    }
+                Button(action: {
+                    if inputText.isEmpty {
+                        print("消息不能为空")
+                        return
+                    }
+                    //vm.sendMessage(inputText: inputText)
+                    Task {
+                        await vm.sendMessageAsync(messageText: inputText)
+                    }
+                }, label: {
+                    Text("发送")
+                })
+                .buttonStyle(.borderedProminent)
+                .tint(Color.accentColor)
+            }
+            .padding(.horizontal)
+            .padding(.bottom)
+        }
     }
 }
 
