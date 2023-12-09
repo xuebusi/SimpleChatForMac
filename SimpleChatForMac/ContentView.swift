@@ -46,8 +46,8 @@ struct SidebarView: View {
                     VStack(spacing: 16) {
                         ForEach(vm.chats.indices, id: \.self) { chatIndex in
                             Text("\(vm.chats[chatIndex].title)(\(vm.chats[chatIndex].messages.count)条)")
-                                .padding(.vertical)
-                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(vm.selectedChat?.id == vm.chats[chatIndex].id ? Color.accentColor.opacity(0.1) : Color(.systemGray).opacity(0.1))
                                 .id(vm.chats[chatIndex].id)
                                 .overlay(alignment: .leading, content: {
@@ -114,9 +114,16 @@ struct SidebarView: View {
 struct DetailView: View {
     @EnvironmentObject var vm: ViewModel
     @State var inputText: String = ""
+    @State var isTitleEditable: Bool = false
     
     var body: some View {
         VStack(spacing: 0) {
+            // 标题支持编辑
+            if let index = vm.chats.firstIndex(where: { $0.id == vm.selectedChat?.id }) {
+                EditableTextView(text: $vm.chats[index].title, isEditable: $isTitleEditable)
+                Divider()
+            }
+            // 聊天记录
             ScrollViewReader { proxy in
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .trailing, spacing: 20) {
@@ -156,8 +163,12 @@ struct DetailView: View {
                         }
                     }
                 }
+                .onTapGesture {
+                    isTitleEditable = false
+                }
             }
             
+            // 发送消息
             HStack {
                 TextField("发送消息", text: $inputText)
                     .onAppear {
@@ -266,14 +277,6 @@ class ViewModel: ObservableObject {
             return chats[index].messages
         } else {
             return []
-        }
-    }
-    
-    // 重命名
-    func renameChat(chatId: String, newName: String) {
-        if let index = chats.firstIndex(where: { $0.id == chatId }) {
-            chats[index].title = newName
-            saveChats()
         }
     }
     
