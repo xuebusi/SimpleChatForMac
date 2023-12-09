@@ -23,7 +23,6 @@ struct HomeView: View {
     var body: some View {
         HStack {
             SidebarView()
-                .padding()
                 .frame(width: 200)
             
             Divider()
@@ -42,7 +41,7 @@ struct SidebarView: View {
     var body: some View {
         VStack {
             ScrollViewReader { proxy in
-                ScrollView {
+                ScrollView(showsIndicators: false) {
                     VStack(spacing: 16) {
                         ForEach(vm.chats.indices, id: \.self) { chatIndex in
                             Text("\(vm.chats[chatIndex].title)(\(vm.chats[chatIndex].messages.count)条)")
@@ -57,10 +56,8 @@ struct SidebarView: View {
                                         .opacity(vm.selectedChat?.id == vm.chats[chatIndex].id ? 1 : 0)
                                 })
                                 .onTapGesture {
-                                    DispatchQueue.main.async {
-                                        vm.selectedChat = vm.chats[chatIndex]
-                                        print("当前选中聊天ID：\(String(describing: vm.selectedChat?.id))")
-                                    }
+                                    vm.selectedChat = vm.chats[chatIndex]
+                                    print("当前选中聊天ID：\(String(describing: vm.selectedChat?.id))")
                                 }
                                 .contextMenu {
                                     VStack {
@@ -79,6 +76,8 @@ struct SidebarView: View {
                                 }
                         }
                     }
+                    .padding([.vertical, .leading])
+                    .padding(.trailing, 6)
                     .onAppear {
                         DispatchQueue.main.async {
                             proxy.scrollTo(vm.selectedChat?.id, anchor: .top)
@@ -106,6 +105,7 @@ struct SidebarView: View {
                 .buttonStyle(.borderedProminent)
                 .tint(Color.accentColor)
             }
+            .padding([.bottom])
         }
     }
 }

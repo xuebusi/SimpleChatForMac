@@ -19,9 +19,7 @@ struct EditableTextView: View {
                         .padding(.vertical, 10)
                 } else {
                     Button {
-                        DispatchQueue.main.async {
-                            isEditable = true
-                        }
+                        isEditable = true
                     } label: {
                         HStack(spacing: 0) {
                             Text(text)
@@ -38,9 +36,7 @@ struct EditableTextView: View {
             
             if isEditable {
                 Button(action: {
-                    DispatchQueue.main.async {
-                        isEditable = false
-                    }
+                    isEditable = false
                 }, label: {
                     Text("确定")
                 })
