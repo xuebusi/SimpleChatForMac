@@ -44,7 +44,6 @@ struct EditableTextView: View {
                 .tint(Color.accentColor)
             }
         }
-        .padding(.horizontal)
     }
 }
 

@@ -21,7 +21,7 @@ struct ContentView: View {
 
 struct HomeView: View {
     var body: some View {
-        HStack {
+        HStack(spacing: 0) {
             SidebarView()
                 .frame(width: 200)
             
@@ -76,8 +76,6 @@ struct SidebarView: View {
                                 }
                         }
                     }
-                    .padding([.vertical, .leading])
-                    .padding(.trailing, 6)
                     .onAppear {
                         DispatchQueue.main.async {
                             proxy.scrollTo(vm.selectedChat?.id, anchor: .top)
@@ -101,12 +99,14 @@ struct SidebarView: View {
                     vm.saveChats()
                 } label: {
                     Text("新建聊天")
+                        .padding(.vertical, 3)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(Color.accentColor)
             }
-            .padding([.bottom])
+            .padding(.top, 8)
         }
+        .padding()
     }
 }
 
@@ -121,6 +121,8 @@ struct DetailView: View {
             // 标题支持编辑
             if let index = vm.chats.firstIndex(where: { $0.id == vm.selectedChat?.id }) {
                 EditableTextView(text: $vm.chats[index].title, isEditable: $isTitleEditable)
+                    .padding(.horizontal)
+                    .padding(.vertical, 3)
                 Divider()
             }
             // 聊天记录
@@ -168,33 +170,79 @@ struct DetailView: View {
                 }
             }
             
-            // 发送消息
-            HStack {
-                TextField("发送消息", text: $inputText)
-                    .onAppear {
-                        inputText = vm.getCurChat()?.title ?? ""
+            Divider()
+            
+            VStack(alignment: .leading, spacing: 10) {
+                // 工具栏
+                HStack(spacing: 12) {
+                    ToolButtonView(imageSystemName: "mic") {
+                        print("开始录音")
                     }
-                    .onChange(of: vm.selectedChat?.id) { oldValue, newValue in
-                        inputText = vm.getCurChat()?.title ?? ""
+                    ToolButtonView(imageSystemName: "square.on.square") {
+                        print("拷贝")
                     }
-                Button(action: {
-                    if inputText.isEmpty {
-                        print("消息不能为空")
-                        return
+                    ToolButtonView(imageSystemName: "arrow.up.to.line.compact") {
+                        print("滚动到顶部")
                     }
-                    //vm.sendMessage(inputText: inputText)
-                    Task {
-                        await vm.sendMessageAsync(messageText: inputText)
+                    ToolButtonView(imageSystemName: "arrow.down.to.line.compact") {
+                        print("滚动到底部")
                     }
-                }, label: {
-                    Text("发送")
-                })
-                .buttonStyle(.borderedProminent)
-                .tint(Color.accentColor)
+                }
+                .padding(.leading, 10)
+                
+                // 发送消息
+                HStack(spacing: 12) {
+                    TextEditor(text: $inputText)
+                        .textEditorStyle(.plain)
+                        .padding(6)
+                        .frame(height: 80)
+                        .background(Color(.systemGray).opacity(0.1))
+                        .cornerRadius(10)
+                        .onAppear {
+                            inputText = vm.getCurChat()?.title ?? ""
+                        }
+                        .onChange(of: vm.selectedChat?.id) { oldValue, newValue in
+                            inputText = vm.getCurChat()?.title ?? ""
+                        }
+                    Button(action: {
+                        if inputText.isEmpty {
+                            print("消息不能为空")
+                            return
+                        }
+                        //vm.sendMessage(inputText: inputText)
+                        Task {
+                            await vm.sendMessageAsync(messageText: inputText)
+                        }
+                    }, label: {
+                        Text("发送")
+                            .padding(.vertical, 3)
+                    })
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.accentColor)
+                }
             }
-            .padding(.horizontal)
-            .padding(.bottom)
+            .padding([.horizontal, .bottom])
+            .padding(.top, 10)
         }
+    }
+}
+
+struct ToolButtonView: View {
+    let imageSystemName: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: {
+            action()
+        }, label: {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color(.systemGray).opacity(0.1))
+                .frame(width: 26, height: 26)
+                .overlay {
+                    Image(systemName: imageSystemName)
+                }
+        })
+        .buttonStyle(.plain)
     }
 }
 
