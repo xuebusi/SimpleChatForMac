@@ -20,23 +20,45 @@ struct ContentView: View {
 
 
 struct HomeView: View {
+    @State private var settingsActive: Bool = false
+    
     var body: some View {
         HStack(spacing: 0) {
-            SidebarView()
-                .frame(width: 200)
-            
-            Divider()
-            
-            DetailView()
-                .frame(minWidth: 500)
+            if settingsActive {
+                SettingsView(settingsActive: $settingsActive)
+            } else {
+                SidebarView(settingsActive: $settingsActive)
+                    .frame(width: 200)
+                
+                Divider()
+                
+                DetailView()
+                    .frame(minWidth: 500)
+            }
         }
         .frame(minHeight: 460)
+    }
+}
+
+struct SettingsView: View {
+    @Binding var settingsActive: Bool
+    
+    var body: some View {
+        Text("设置界面")
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .overlay(alignment: .topTrailing) {
+                SFButtonView(imageSystemName: "xmark") {
+                    settingsActive = false
+                }
+                .padding()
+            }
     }
 }
 
 // 侧边栏视图
 struct SidebarView: View {
     @EnvironmentObject var vm: ViewModel
+    @Binding var settingsActive: Bool
     
     var body: some View {
         VStack {
@@ -92,6 +114,10 @@ struct SidebarView: View {
             }
             
             HStack {
+                SFButtonView(imageSystemName: "gearshape.fill") {
+                    settingsActive = true
+                }
+                
                 Spacer()
                 Button {
                     vm.chats.insert(Chat(title: "新的聊天", messages: []), at: 0)
@@ -181,24 +207,27 @@ struct DetailView: View {
             VStack(alignment: .leading, spacing: 10) {
                 // 工具栏
                 HStack(spacing: 12) {
-                    ToolButtonView(imageSystemName: "mic") {
+                    SFButtonView(imageSystemName: "mic") {
                         print("开始录音")
                     }
-                    ToolButtonView(imageSystemName: "square.on.square") {
+                    
+                    SFButtonView(imageSystemName: "square.on.square") {
                         var textResult: String = ""
                         for message in vm.selectedChat?.messages ?? [] {
                             textResult += message.role == .assistant ? "\n\(message.content)\n\n" : "\(message.content)\n"
                         }
                         copyToClipboard(text: textResult)
                     }
-                    ToolButtonView(imageSystemName: "arrow.up.to.line.compact") {
+                    
+                    SFButtonView(imageSystemName: "arrow.up.to.line.compact") {
                         DispatchQueue.main.async {
                             withAnimation {
                                 scrollViewProxy?.scrollTo(vm.getCurChatMessages().first?.id, anchor: .bottom)
                             }
                         }
                     }
-                    ToolButtonView(imageSystemName: "arrow.down.to.line.compact") {
+                    
+                    SFButtonView(imageSystemName: "arrow.down.to.line.compact") {
                         DispatchQueue.main.async {
                             withAnimation {
                                 scrollViewProxy?.scrollTo(vm.getCurChatMessages().last?.id, anchor: .bottom)
@@ -240,21 +269,22 @@ struct DetailView: View {
     }
 }
 
-struct ToolButtonView: View {
+struct SFButtonView: View {
     let imageSystemName: String
     let action: () -> Void
     
     var body: some View {
-        Button(action: {
+        Button {
             action()
-        }, label: {
-            RoundedRectangle(cornerRadius: 6)
-                .fill(Color(.systemGray).opacity(0.1))
+        } label: {
+            Image(systemName: imageSystemName)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .padding(6)
                 .frame(width: 26, height: 26)
-                .overlay {
-                    Image(systemName: imageSystemName)
-                }
-        })
+                .background(Color(.systemGray).opacity(0.1))
+                .cornerRadius(6)
+        }
         .buttonStyle(.plain)
     }
 }
