@@ -215,10 +215,12 @@ struct DetailView: View {
                             proxy.scrollTo(vm.getCurChatMessages().last?.id, anchor: .bottom)
                         }
                     }
-                    .onChange(of: vm.getCurChatMessages().count) { _, _ in
+                    .onChange(of: vm.getCurChatMessages().count) { oldValue, newValue in
                         DispatchQueue.main.async {
-                            print("当前消息数量变化")
-                            proxy.scrollTo(vm.getCurChatMessages().last?.id, anchor: .bottom)
+                            if newValue > oldValue {
+                                print("当前消息数量变化")
+                                proxy.scrollTo(vm.getCurChatMessages().last?.id, anchor: .bottom)
+                            }
                         }
                     }
                     .onChange(of: vm.selectedChat?.id) { _, _ in
