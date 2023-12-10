@@ -115,14 +115,17 @@ struct DetailView: View {
     @EnvironmentObject var vm: ViewModel
     @State var inputText: String = ""
     @State var isTitleEditable: Bool = false
+    @State private var scrollViewProxy: ScrollViewProxy? = nil
     
     var body: some View {
         VStack(spacing: 0) {
             // 标题支持编辑
             if let index = vm.chats.firstIndex(where: { $0.id == vm.selectedChat?.id }) {
-                EditableTextView(text: $vm.chats[index].title, isEditable: $isTitleEditable)
-                    .padding(.horizontal)
-                    .padding(.vertical, 3)
+                EditableTextView(text: $vm.chats[index].title, isEditable: $isTitleEditable) {
+                    isTitleEditable = false
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 3)
                 Divider()
             }
             // 聊天记录
@@ -165,8 +168,8 @@ struct DetailView: View {
                         }
                     }
                 }
-                .onTapGesture {
-                    isTitleEditable = false
+                .onAppear {
+                    scrollViewProxy = proxy
                 }
             }
             
@@ -179,13 +182,25 @@ struct DetailView: View {
                         print("开始录音")
                     }
                     ToolButtonView(imageSystemName: "square.on.square") {
-                        print("拷贝")
+                        var textResult: String = ""
+                        for message in vm.selectedChat?.messages ?? [] {
+                            textResult += message.role == .assistant ? "\n\(message.content)\n\n" : "\(message.content)"
+                        }
+                        copyToClipboard(text: textResult)
                     }
                     ToolButtonView(imageSystemName: "arrow.up.to.line.compact") {
-                        print("滚动到顶部")
+                        DispatchQueue.main.async {
+                            withAnimation {
+                                scrollViewProxy?.scrollTo(vm.getCurChatMessages().first?.id, anchor: .bottom)
+                            }
+                        }
                     }
                     ToolButtonView(imageSystemName: "arrow.down.to.line.compact") {
-                        print("滚动到底部")
+                        DispatchQueue.main.async {
+                            withAnimation {
+                                scrollViewProxy?.scrollTo(vm.getCurChatMessages().last?.id, anchor: .bottom)
+                            }
+                        }
                     }
                 }
                 .padding(.leading, 10)
@@ -401,3 +416,18 @@ class ApiService {
 
 
 /// --------------------------------------------------------
+
+
+// 日期格式化
+public func dateFormat(date: Date) -> String {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy/MM/dd HH:mm:ss"
+    return formatter.string(from: date)
+}
+
+// 将文本复制到剪贴板
+func copyToClipboard(text: String) {
+    let pasteboard = NSPasteboard.general
+    pasteboard.clearContents()
+    pasteboard.writeObjects([text as NSPasteboardWriting])
+}

@@ -10,6 +10,7 @@ import SwiftUI
 struct EditableTextView: View {
     @Binding var text: String
     @Binding var isEditable: Bool
+    let action: () -> Void
     
     var body: some View {
         HStack {
@@ -36,7 +37,7 @@ struct EditableTextView: View {
             
             if isEditable {
                 Button(action: {
-                    isEditable = false
+                    action()
                 }, label: {
                     Text("确定")
                 })
@@ -48,6 +49,8 @@ struct EditableTextView: View {
 }
 
 #Preview {
-    EditableTextView(text: .constant("Hello, World!"), isEditable: .constant(false))
+    EditableTextView(text: .constant("Hello, World!"), isEditable: .constant(false)) {
+        
+    }
         .frame(width: 300, height: 200)
 }
