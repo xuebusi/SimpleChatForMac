@@ -288,18 +288,14 @@ struct EditableTextView: View {
                     TextField(text, text: $text)
                         .padding(.vertical, 10)
                 } else {
-                    Button {
-                        isEditable = true
-                    } label: {
-                        HStack(spacing: 0) {
-                            Text(text)
-                            Image(systemName: "square.and.pencil")
-                                .foregroundColor(.gray)
+                    HStack {
+                        Text(text)
+                        SFButtonView(imageSystemName: "square.and.pencil") {
+                            isEditable = true
                         }
-                        .padding(.vertical, 10)
-                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .buttonStyle(.plain)
+                    .padding(.vertical, 6)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             .font(.system(.headline))
@@ -334,6 +330,15 @@ struct SFButtonView: View {
                 .cornerRadius(6)
         }
         .buttonStyle(.plain)
+        .onHover { isHovered in
+            if isHovered {
+                // 鼠标悬停时更改指针形状
+                NSCursor.pointingHand.set()
+            } else {
+                // 恢复默认指针形状
+                NSCursor.arrow.set()
+            }
+        }
     }
 }
 
