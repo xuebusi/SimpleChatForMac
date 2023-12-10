@@ -52,5 +52,5 @@ struct EditableTextView: View {
     EditableTextView(text: .constant("Hello, World!"), isEditable: .constant(false)) {
         
     }
-        .frame(width: 300, height: 200)
+    .frame(width: 300, height: 200)
 }

@@ -123,6 +123,9 @@ struct DetailView: View {
             if let index = vm.chats.firstIndex(where: { $0.id == vm.selectedChat?.id }) {
                 EditableTextView(text: $vm.chats[index].title, isEditable: $isTitleEditable) {
                     isTitleEditable = false
+                    if vm.chats[index].title.isEmpty {
+                        vm.chats[index].title = "新的聊天"
+                    }
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 3)
@@ -184,7 +187,7 @@ struct DetailView: View {
                     ToolButtonView(imageSystemName: "square.on.square") {
                         var textResult: String = ""
                         for message in vm.selectedChat?.messages ?? [] {
-                            textResult += message.role == .assistant ? "\n\(message.content)\n\n" : "\(message.content)"
+                            textResult += message.role == .assistant ? "\n\(message.content)\n\n" : "\(message.content)\n"
                         }
                         copyToClipboard(text: textResult)
                     }
@@ -209,16 +212,11 @@ struct DetailView: View {
                 HStack(spacing: 12) {
                     TextEditor(text: $inputText)
                         .textEditorStyle(.plain)
+                        .font(.body)
                         .padding(6)
                         .frame(height: 80)
                         .background(Color(.systemGray).opacity(0.1))
                         .cornerRadius(10)
-                        .onAppear {
-                            inputText = vm.getCurChat()?.title ?? ""
-                        }
-                        .onChange(of: vm.selectedChat?.id) { oldValue, newValue in
-                            inputText = vm.getCurChat()?.title ?? ""
-                        }
                     Button(action: {
                         if inputText.isEmpty {
                             print("消息不能为空")
