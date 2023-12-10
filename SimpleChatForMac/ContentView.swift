@@ -26,6 +26,7 @@ struct HomeView: View {
         HStack(spacing: 0) {
             if settingsActive {
                 SettingsView(settingsActive: $settingsActive)
+                    .frame(minWidth: 700)
             } else {
                 SidebarView(settingsActive: $settingsActive)
                     .frame(width: 200)
@@ -166,11 +167,17 @@ struct DetailView: View {
                                 if message.role == .user {
                                     Spacer()
                                 }
-                                Text(message.content)
-                                    .padding()
-                                    .background(message.role == .user ? Color(.systemGray).opacity(0.1) : Color.accentColor.opacity(0.1))
-                                    .cornerRadius(10)
-                                    .id(message.id)
+                                VStack(alignment: message.role == .user ? .trailing : .leading) {
+                                    Text(dateFormat(date: message.createTime))
+                                        .font(.caption)
+                                        .foregroundStyle(Color.secondary)
+                                        .padding(message.role == .user ? .trailing : .leading, 10)
+                                    Text(message.content)
+                                        .padding()
+                                        .background(message.role == .user ? Color(.systemGray).opacity(0.1) : Color.accentColor.opacity(0.1))
+                                        .cornerRadius(10)
+                                        .id(message.id)
+                                }
                                 if message.role == .assistant {
                                     Spacer()
                                 }
@@ -269,6 +276,47 @@ struct DetailView: View {
     }
 }
 
+struct EditableTextView: View {
+    @Binding var text: String
+    @Binding var isEditable: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        HStack {
+            ZStack {
+                if isEditable {
+                    TextField(text, text: $text)
+                        .padding(.vertical, 10)
+                } else {
+                    Button {
+                        isEditable = true
+                    } label: {
+                        HStack(spacing: 0) {
+                            Text(text)
+                            Image(systemName: "square.and.pencil")
+                                .foregroundColor(.gray)
+                        }
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .font(.system(.headline))
+            
+            if isEditable {
+                Button(action: {
+                    action()
+                }, label: {
+                    Text("确定")
+                })
+                .buttonStyle(.borderedProminent)
+                .tint(Color.accentColor)
+            }
+        }
+    }
+}
+
 struct SFButtonView: View {
     let imageSystemName: String
     let action: () -> Void
@@ -296,37 +344,11 @@ class ViewModel: ObservableObject {
         }
     }
     
-    //    @Published var currentChatID: String? = UserDefaults.standard.string(forKey: "currentChatID") {
-    //        didSet {
-    //            UserDefaults.standard.set(currentChatID, forKey: "currentChatID")
-    //            print("更新当前选中的聊天对象成功！\(String(describing: currentChatID))")
-    //        }
-    //    }
-    
     @Published var chats: [Chat] = [] {
         didSet {
             saveChats()
         }
     }
-    
-    //    @Published var chats: [Chat] = [
-    //        Chat(
-    //            title: "郭靖",
-    //            messages: (0..<1).map({ Message(content: "郭靖\($0)", role: .user) })
-    //        ),
-    //        Chat(
-    //            title: "黄蓉",
-    //            messages: (0..<1).map({ Message(content: "黄蓉\($0)", role: .user) })
-    //        ),
-    //        Chat(
-    //            title: "杨康",
-    //            messages: (0..<1).map({ Message(content: "杨康\($0)", role: .user) })
-    //        ),
-    //        Chat(
-    //            title: "穆念慈",
-    //            messages: (0..<1).map({ Message(content: "穆念慈\($0)", role: .user) })
-    //        ),
-    //    ]
     
     init() {
         loadChats()
@@ -420,6 +442,7 @@ struct Chat: Identifiable, Codable, Equatable {
 
 struct Message: Identifiable, Codable, Equatable {
     var id: String = UUID().uuidString
+    var createTime: Date = .init()
     let content: String
     let role: Role
 }

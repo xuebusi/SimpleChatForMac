@@ -11,7 +11,6 @@
 		2B8D93E12B205919002C2697 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B8D93E02B205919002C2697 /* ContentView.swift */; };
 		2B8D93E32B20591A002C2697 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2B8D93E22B20591A002C2697 /* Assets.xcassets */; };
 		2B8D93E62B20591A002C2697 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2B8D93E52B20591A002C2697 /* Preview Assets.xcassets */; };
-		2BEC03C42B2435D7000C1F8F /* EditableTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BEC03C32B2435D7000C1F8F /* EditableTextView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -21,7 +20,6 @@
 		2B8D93E22B20591A002C2697 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2B8D93E52B20591A002C2697 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		2B8D93E72B20591A002C2697 /* SimpleChatForMac.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SimpleChatForMac.entitlements; sourceTree = "<group>"; };
-		2BEC03C32B2435D7000C1F8F /* EditableTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditableTextView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -56,7 +54,6 @@
 			children = (
 				2B8D93DE2B205919002C2697 /* SimpleChatForMacApp.swift */,
 				2B8D93E02B205919002C2697 /* ContentView.swift */,
-				2BEC03C32B2435D7000C1F8F /* EditableTextView.swift */,
 				2B8D93E22B20591A002C2697 /* Assets.xcassets */,
 				2B8D93E72B20591A002C2697 /* SimpleChatForMac.entitlements */,
 				2B8D93E42B20591A002C2697 /* Preview Content */,
@@ -142,7 +139,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				2BEC03C42B2435D7000C1F8F /* EditableTextView.swift in Sources */,
 				2B8D93E12B205919002C2697 /* ContentView.swift in Sources */,
 				2B8D93DF2B205919002C2697 /* SimpleChatForMacApp.swift in Sources */,
 			);
