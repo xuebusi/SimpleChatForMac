@@ -140,16 +140,13 @@ struct SidebarView: View {
 // 详情视图
 struct DetailView: View {
     @EnvironmentObject var vm: ViewModel
-    @State var inputText: String = ""
-    @State var isTitleEditable: Bool = false
-    @State private var scrollViewProxy: ScrollViewProxy? = nil
     
     var body: some View {
         VStack(spacing: 0) {
             // 标题支持编辑
             if let index = vm.chats.firstIndex(where: { $0.id == vm.selectedChat?.id }) {
-                EditableTextView(text: $vm.chats[index].title, isEditable: $isTitleEditable) {
-                    isTitleEditable = false
+                EditableTextView(text: $vm.chats[index].title, isEditable: $vm.isTitleEditable) {
+                    vm.isTitleEditable = false
                     if vm.chats[index].title.isEmpty {
                         vm.chats[index].title = "新的聊天"
                     }
@@ -177,6 +174,33 @@ struct DetailView: View {
                                         .background(message.role == .user ? Color(.systemGray).opacity(0.1) : Color.accentColor.opacity(0.1))
                                         .cornerRadius(10)
                                         .id(message.id)
+                                        .contextMenu {
+                                            VStack {
+                                                Button {
+                                                    copyToClipboard(text: "\(message.content)\n\n")
+                                                } label: {
+                                                    HStack {
+                                                        Image(systemName: "square.on.square")
+                                                            .foregroundColor(.red)
+                                                        Text("复制")
+                                                    }
+                                                }
+                                                
+                                                Divider()
+                                                
+                                                Button {
+                                                    withAnimation {
+                                                        vm.removeMessage(chatId: vm.selectedChat?.id ?? "", messageId: message.id)
+                                                    }
+                                                } label: {
+                                                    HStack {
+                                                        Image(systemName: "trash")
+                                                            .foregroundColor(.red)
+                                                        Text("删除")
+                                                    }
+                                                }
+                                            }
+                                        }
                                 }
                                 if message.role == .assistant {
                                     Spacer()
@@ -205,7 +229,7 @@ struct DetailView: View {
                     }
                 }
                 .onAppear {
-                    scrollViewProxy = proxy
+                    vm.scrollViewProxy = proxy
                 }
             }
             
@@ -217,7 +241,7 @@ struct DetailView: View {
                     SFButtonView(imageSystemName: "mic") {
                         print("开始录音")
                     }
-                    
+                    // 复制聊天记录
                     SFButtonView(imageSystemName: "square.on.square") {
                         var textResult: String = ""
                         for message in vm.selectedChat?.messages ?? [] {
@@ -225,19 +249,19 @@ struct DetailView: View {
                         }
                         copyToClipboard(text: textResult)
                     }
-                    
+                    // 滚动到顶部
                     SFButtonView(imageSystemName: "arrow.up.to.line.compact") {
                         DispatchQueue.main.async {
                             withAnimation {
-                                scrollViewProxy?.scrollTo(vm.getCurChatMessages().first?.id, anchor: .bottom)
+                                vm.scrollViewProxy?.scrollTo(vm.getCurChatMessages().first?.id, anchor: .bottom)
                             }
                         }
                     }
-                    
+                    // 滚动到底部
                     SFButtonView(imageSystemName: "arrow.down.to.line.compact") {
                         DispatchQueue.main.async {
                             withAnimation {
-                                scrollViewProxy?.scrollTo(vm.getCurChatMessages().last?.id, anchor: .bottom)
+                                vm.scrollViewProxy?.scrollTo(vm.getCurChatMessages().last?.id, anchor: .bottom)
                             }
                         }
                     }
@@ -246,7 +270,7 @@ struct DetailView: View {
                 
                 // 发送消息
                 HStack(spacing: 12) {
-                    TextEditor(text: $inputText)
+                    TextEditor(text: $vm.inputText)
                         .textEditorStyle(.plain)
                         .font(.body)
                         .padding(6)
@@ -254,13 +278,12 @@ struct DetailView: View {
                         .background(Color(.systemGray).opacity(0.1))
                         .cornerRadius(10)
                     Button(action: {
-                        if inputText.isEmpty {
+                        if vm.inputText.isEmpty {
                             print("消息不能为空")
                             return
                         }
-                        //vm.sendMessage(inputText: inputText)
                         Task {
-                            await vm.sendMessageAsync(messageText: inputText)
+                            await vm.sendMessageAsync(messageText: vm.inputText)
                         }
                     }, label: {
                         Text("发送")
@@ -343,6 +366,10 @@ struct SFButtonView: View {
 }
 
 class ViewModel: ObservableObject {
+    @Published var inputText: String = ""
+    @Published var isTitleEditable: Bool = false
+    @Published var scrollViewProxy: ScrollViewProxy? = nil
+    
     @Published var selectedChat: Chat? {
         didSet {
             saveSelectedChat()
@@ -406,11 +433,12 @@ class ViewModel: ObservableObject {
         }
     }
     
-    func getCurChat() -> Chat? {
-        if let index = chats.firstIndex(where: {$0.id == selectedChat?.id}) {
-            return chats[index]
-        } else {
-            return nil
+    // 删除消息
+    func removeMessage(chatId: String, messageId: String) {
+        if let index = chats.firstIndex(where: { $0.id == chatId }) {
+            if let messageIndex = chats[index].messages.firstIndex(where: { $0.id == messageId }) {
+                chats[index].messages.remove(at: messageIndex)
+            }
         }
     }
     
@@ -424,6 +452,7 @@ class ViewModel: ObservableObject {
         
         await MainActor.run {
             self.chats[chatIndex].messages.append(Message(content: messageText, role: .user))
+            self.inputText = ""
         }
         
         let result = await apiService.sendMessage(messageText: messageText)
