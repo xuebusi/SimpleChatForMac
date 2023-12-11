@@ -13,5 +13,10 @@ struct SimpleChatForMacApp: App {
         WindowGroup {
             ContentView()
         }
+        
+        //MenuBarExtra("SimpleChat", systemImage: "plus.message.fill") {
+        //    ContentView()
+        //}
+        //.menuBarExtraStyle(.window)
     }
 }
