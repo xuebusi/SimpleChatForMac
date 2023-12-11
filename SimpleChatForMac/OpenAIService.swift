@@ -16,7 +16,7 @@ class OpenAIService {
             return .failure(CustomError.error_info("请先配置密钥！"))
         }
         
-        if ((apiKey?.isEmpty) == nil) {
+        if apiKey!.isEmpty {
             return .failure(CustomError.error_info("请先配置密钥！"))
         }
         

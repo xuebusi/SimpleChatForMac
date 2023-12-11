@@ -58,14 +58,8 @@ struct SettingsView: View {
                                 .frame(height: 36)
                             
                             Button {
-                                if apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                                    isSuccess = false
-                                    tipMessage = "密钥不能为空"
-                                    return
-                                }
                                 UserDefaults.standard.set(apiKey, forKey: "apiKey")
                                 let apiKey = UserDefaults.standard.string(forKey: "apiKey")
-                                isSuccess = true
                                 tipMessage = "保存API密钥成功"
                                 print("保存API密钥成功:apiKey=\(apiKey ?? "")")
                             } label: {
@@ -81,11 +75,11 @@ struct SettingsView: View {
                             Text("您可以在 https://openai.com 免费申请API Key")
                                 .font(.caption)
                                 .foregroundStyle(Color.secondary)
-                            if !tipMessage.isEmpty {
+                            if !tipMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                                 Text(tipMessage)
                                     .padding(6)
                                     .font(.body)
-                                    .foregroundStyle(isSuccess ? Color.green : Color.red)
+                                    .foregroundStyle(Color.green)
                                     .background(Color.accentColor.opacity(0.1))
                                     .cornerRadius(6)
                                     .onAppear {
@@ -357,10 +351,6 @@ struct DetailView: View {
                         .background(Color(.systemGray).opacity(0.1))
                         .cornerRadius(10)
                     Button(action: {
-                        if vm.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            print("消息不能为空")
-                            return
-                        }
                         Task {
                             vm.sendMessage()
                         }
@@ -540,11 +530,15 @@ class ViewModel: ObservableObject {
     func sendMessage() {
         if inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             print("消息不能为空")
+            errorMessage = "消息不能为空"
+            showErrorMessage = true
             return
         }
         
         guard let index = chats.firstIndex(where: {$0.id == selectedChat.id}) else {
             print("聊天对象不存在")
+            errorMessage = "聊天对象不存在"
+            showErrorMessage = true
             return
         }
         
@@ -556,6 +550,16 @@ class ViewModel: ObservableObject {
         guard let apiKey = UserDefaults.standard.string(forKey: "apiKey") else {
             print("请先设置API秘钥！")
             errorMessage = "请先设置API秘钥！"
+            showErrorMessage = true
+            isReceiving = false
+            return
+        }
+        
+        if apiKey.isEmpty {
+            print("请先设置API秘钥！")
+            errorMessage = "请先配置API密钥！"
+            showErrorMessage = true
+            isReceiving = false
             return
         }
         
@@ -565,6 +569,9 @@ class ViewModel: ObservableObject {
             case .success(let response):
                 guard let receivedOpenAIMessage = response.choices.first?.message else {
                     print("没有收到消息")
+                    errorMessage = "没有收到消息"
+                    showErrorMessage = true
+                    isReceiving = false
                     return
                 }
                 let receiveMessage = Message(content: receivedOpenAIMessage.content, role: receivedOpenAIMessage.role)
