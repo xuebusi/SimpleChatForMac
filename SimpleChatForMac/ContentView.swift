@@ -43,16 +43,77 @@ struct HomeView: View {
 
 struct SettingsView: View {
     @Binding var settingsActive: Bool
+    @State var apiKey: String = UserDefaults.standard.string(forKey: "apiKey") ?? ""
+    @State var tipMessage: String = ""
+    @State var isSuccess: Bool = false
     
     var body: some View {
-        Text("设置界面")
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .overlay(alignment: .topTrailing) {
-                SFButtonView(imageSystemName: "xmark") {
-                    settingsActive = false
+        VStack {
+            GeometryReader { reader in
+                let size = reader.size
+                Form {
+                    Section {
+                        HStack {
+                            TextField("", text: $apiKey)
+                                .frame(height: 36)
+                            
+                            Button {
+                                if apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                    isSuccess = false
+                                    tipMessage = "密钥不能为空"
+                                    return
+                                }
+                                UserDefaults.standard.set(apiKey, forKey: "apiKey")
+                                let apiKey = UserDefaults.standard.string(forKey: "apiKey")
+                                isSuccess = true
+                                tipMessage = "保存API密钥成功"
+                                print("保存API密钥成功:apiKey=\(apiKey ?? "")")
+                            } label: {
+                                Text("保存")
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(Color.accentColor)
+                        }
+                    } header: {
+                        Label("API Key", systemImage: "key.fill")
+                    } footer: {
+                        HStack {
+                            Text("您可以在 https://openai.com 免费申请API Key")
+                                .font(.caption)
+                                .foregroundStyle(Color.secondary)
+                            if !tipMessage.isEmpty {
+                                Text(tipMessage)
+                                    .padding(6)
+                                    .font(.body)
+                                    .foregroundStyle(isSuccess ? Color.green : Color.red)
+                                    .background(Color.accentColor.opacity(0.1))
+                                    .cornerRadius(6)
+                                    .onAppear {
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                                            withAnimation {
+                                                tipMessage = ""
+                                            }
+                                        }
+                                    }
+                            }
+                        }
+                    }
                 }
                 .padding()
+                .frame(minWidth: 300)
+                .frame(width: size.width * 0.8)
             }
+            
+            Spacer()
+        }
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(alignment: .topTrailing) {
+            SFButtonView(imageSystemName: "xmark") {
+                settingsActive = false
+            }
+            .padding()
+        }
     }
 }
 
@@ -70,17 +131,17 @@ struct SidebarView: View {
                             Text("\(vm.chats[chatIndex].title)(\(vm.chats[chatIndex].messages.count)条)")
                                 .padding()
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(vm.selectedChat?.id == vm.chats[chatIndex].id ? Color.accentColor.opacity(0.1) : Color(.systemGray).opacity(0.1))
+                                .background(vm.selectedChat.id == vm.chats[chatIndex].id ? Color.accentColor.opacity(0.1) : Color(.systemGray).opacity(0.1))
                                 .id(vm.chats[chatIndex].id)
                                 .overlay(alignment: .leading, content: {
                                     Rectangle()
                                         .fill(Color.accentColor)
                                         .frame(width: 4)
-                                        .opacity(vm.selectedChat?.id == vm.chats[chatIndex].id ? 1 : 0)
+                                        .opacity(vm.selectedChat.id == vm.chats[chatIndex].id ? 1 : 0)
                                 })
                                 .onTapGesture {
                                     vm.selectedChat = vm.chats[chatIndex]
-                                    print("当前选中聊天ID：\(String(describing: vm.selectedChat?.id))")
+                                    print("当前选中聊天ID：\(String(describing: vm.selectedChat.id))")
                                 }
                                 .contextMenu {
                                     VStack {
@@ -101,13 +162,13 @@ struct SidebarView: View {
                     }
                     .onAppear {
                         DispatchQueue.main.async {
-                            proxy.scrollTo(vm.selectedChat?.id, anchor: .top)
+                            proxy.scrollTo(vm.selectedChat.id, anchor: .top)
                         }
                     }
                     .onChange(of: vm.chats.count) { oldValue, newValue in
                         if newValue > oldValue {
                             DispatchQueue.main.async {
-                                proxy.scrollTo(vm.selectedChat?.id, anchor: .bottom)
+                                proxy.scrollTo(vm.selectedChat.id, anchor: .bottom)
                             }
                         }
                     }
@@ -144,7 +205,7 @@ struct DetailView: View {
     var body: some View {
         VStack(spacing: 0) {
             // 标题支持编辑
-            if let index = vm.chats.firstIndex(where: { $0.id == vm.selectedChat?.id }) {
+            if let index = vm.chats.firstIndex(where: { $0.id == vm.selectedChat.id }) {
                 EditableTextView(text: $vm.chats[index].title, isEditable: $vm.isTitleEditable) {
                     vm.isTitleEditable = false
                     if vm.chats[index].title.isEmpty {
@@ -177,7 +238,7 @@ struct DetailView: View {
                                         .contextMenu {
                                             VStack {
                                                 Button {
-                                                    copyToClipboard(text: "\(message.content)\n\n")
+                                                    copyToClipboard(text: "\(message.content)")
                                                 } label: {
                                                     HStack {
                                                         Image(systemName: "square.on.square")
@@ -190,7 +251,7 @@ struct DetailView: View {
                                                 
                                                 Button {
                                                     withAnimation {
-                                                        vm.removeMessage(chatId: vm.selectedChat?.id ?? "", messageId: message.id)
+                                                        vm.removeMessage(chatId: vm.selectedChat.id, messageId: message.id)
                                                     }
                                                 } label: {
                                                     HStack {
@@ -223,7 +284,7 @@ struct DetailView: View {
                             }
                         }
                     }
-                    .onChange(of: vm.selectedChat?.id) { _, _ in
+                    .onChange(of: vm.selectedChat.id) { _, _ in
                         DispatchQueue.main.async {
                             print("当前选中索引变化")
                             proxy.scrollTo(vm.getCurChatMessages().last?.id, anchor: .bottom)
@@ -246,7 +307,7 @@ struct DetailView: View {
                     // 复制聊天记录
                     SFButtonView(imageSystemName: "square.on.square") {
                         var textResult: String = ""
-                        for message in vm.selectedChat?.messages ?? [] {
+                        for message in vm.selectedChat.messages {
                             textResult += message.role == .assistant ? "\n\(message.content)\n\n" : "\(message.content)\n"
                         }
                         copyToClipboard(text: textResult)
@@ -267,6 +328,22 @@ struct DetailView: View {
                             }
                         }
                     }
+                    
+                    if vm.showErrorMessage {
+                        Text(vm.errorMessage ?? "")
+                            .font(.body)
+                            .foregroundStyle(Color(.systemRed))
+                            .padding(6)
+                            .background(Color.accentColor.opacity(0.1))
+                            .cornerRadius(6)
+                            .onAppear {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                                    withAnimation {
+                                        vm.showErrorMessage = false
+                                    }
+                                }
+                            }
+                    }
                 }
                 .padding(.leading, 10)
                 
@@ -280,12 +357,12 @@ struct DetailView: View {
                         .background(Color(.systemGray).opacity(0.1))
                         .cornerRadius(10)
                     Button(action: {
-                        if vm.inputText.isEmpty {
+                        if vm.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                             print("消息不能为空")
                             return
                         }
                         Task {
-                            await vm.sendMessageAsync(messageText: vm.inputText)
+                            vm.sendMessage()
                         }
                     }, label: {
                         Text("发送")
@@ -293,6 +370,7 @@ struct DetailView: View {
                     })
                     .buttonStyle(.borderedProminent)
                     .tint(Color.accentColor)
+                    .disabled(vm.isReceiving)
                 }
             }
             .padding([.horizontal, .bottom])
@@ -372,7 +450,16 @@ class ViewModel: ObservableObject {
     @Published var isTitleEditable: Bool = false
     @Published var scrollViewProxy: ScrollViewProxy? = nil
     
-    @Published var selectedChat: Chat? {
+    @Published var isReceiving: Bool = false
+    @Published var showErrorMessage: Bool = false
+    @Published var errorMessage: String?
+    
+    private let openAIService = OpenAIService()
+    
+    @Published var selectedChat: Chat = Chat(
+        title: "新的聊天",
+        messages: [Message(content: "你是一个万能助理，可以帮我解决各种问题。请始终使用简体中文回答我。", role: .system)]
+    ) {
         didSet {
             saveSelectedChat()
         }
@@ -387,6 +474,13 @@ class ViewModel: ObservableObject {
     init() {
         loadChats()
         loadSelectedChat()
+        
+        //        clearData()
+    }
+    
+    private func clearData() {
+        UserDefaults.standard.removeObject(forKey: "chats")
+        UserDefaults.standard.removeObject(forKey: "apiKey")
     }
     
     func loadSelectedChat() {
@@ -399,7 +493,7 @@ class ViewModel: ObservableObject {
     func saveSelectedChat() {
         if let encodedData = try? JSONEncoder().encode(selectedChat) {
             UserDefaults.standard.setValue(encodedData, forKey: "selectedChat")
-            print("保存当前所选聊天对象成功:\(String(describing: selectedChat?.id))")
+            print("保存当前所选聊天对象成功:\(String(describing: selectedChat.id))")
         }
     }
     
@@ -417,10 +511,8 @@ class ViewModel: ObservableObject {
         }
     }
     
-    let apiService = ApiService()
-    
     func getCurChatMessages() -> [Message] {
-        if let index = chats.firstIndex(where: {$0.id == selectedChat?.id}) {
+        if let index = chats.firstIndex(where: {$0.id == selectedChat.id}) {
             return chats[index].messages
         } else {
             return []
@@ -444,30 +536,63 @@ class ViewModel: ObservableObject {
         }
     }
     
-    // 模拟发送异步消息
-    func sendMessageAsync(messageText: String) async {
+    // 发送消息
+    func sendMessage() {
+        if inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            print("消息不能为空")
+            return
+        }
         
-        guard let chatIndex = chats.firstIndex(where: {$0.id == selectedChat?.id}) else {
+        guard let index = chats.firstIndex(where: {$0.id == selectedChat.id}) else {
             print("聊天对象不存在")
             return
         }
         
-        await MainActor.run {
-            self.chats[chatIndex].messages.append(Message(content: messageText, role: .user))
-            self.inputText = ""
+        let newMessage = Message(content: inputText, role: .user)
+        chats[index].messages.append(newMessage)
+        inputText = ""
+        isReceiving = true
+        
+        guard let apiKey = UserDefaults.standard.string(forKey: "apiKey") else {
+            print("请先设置API秘钥！")
+            errorMessage = "请先设置API秘钥！"
+            return
         }
         
-        let result = await apiService.sendMessage(messageText: messageText)
-        
-        switch result {
-        case .success(let reply):
-            await MainActor.run {
-                self.chats[chatIndex].messages.append(Message(content: reply, role: .assistant))
+        Task {
+            let result = await openAIService.sendMessage(messages: chats[index].messages, apiKey: apiKey)
+            switch (result) {
+            case .success(let response):
+                guard let receivedOpenAIMessage = response.choices.first?.message else {
+                    print("没有收到消息")
+                    return
+                }
+                let receiveMessage = Message(content: receivedOpenAIMessage.content, role: receivedOpenAIMessage.role)
+                
+                await MainActor.run {
+                    chats[index].messages.append(receiveMessage)
+                    isReceiving = false
+                }
+            case .failure(CustomError.error_info(let errorMsg)):
+                await MainActor.run {
+                    isReceiving = false
+                    errorMessage = errorMsg
+                    showErrorMessage = true
+                }
+            case .failure(let error):
+                await MainActor.run {
+                    print(error.localizedDescription)
+                    isReceiving = false
+                    errorMessage = "网络错误，请检查网络连接！"
+                    showErrorMessage = true
+                }
             }
-        case .failure(let error):
-            print(error.localizedDescription)
         }
     }
+    
+    
+    
+    
 }
 
 struct Chat: Identifiable, Codable, Equatable {
@@ -480,30 +605,8 @@ struct Message: Identifiable, Codable, Equatable {
     var id: String = UUID().uuidString
     var createTime: Date = .init()
     let content: String
-    let role: Role
+    let role: SenderRole
 }
-
-enum Role: CaseIterable, Codable {
-    case user
-    case assistant
-}
-
-/// --------------------------------------------------------
-/// 模拟API请求
-/// --------------------------------------------------------
-
-class ApiService {
-    
-    // 模拟回复消息
-    func sendMessage(messageText: String) async -> Result<String, Error> {
-        try? await Task.sleep(nanoseconds: 5 * 1_000_000_000)
-        return .success("回复[\(messageText)]：\(Int.random(in: 0...999999))")
-    }
-}
-
-
-/// --------------------------------------------------------
-
 
 // 日期格式化
 public func dateFormat(date: Date) -> String {

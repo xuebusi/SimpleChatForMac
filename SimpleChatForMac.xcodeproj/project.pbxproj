@@ -11,6 +11,8 @@
 		2B8D93E12B205919002C2697 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B8D93E02B205919002C2697 /* ContentView.swift */; };
 		2B8D93E32B20591A002C2697 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2B8D93E22B20591A002C2697 /* Assets.xcassets */; };
 		2B8D93E62B20591A002C2697 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2B8D93E52B20591A002C2697 /* Preview Assets.xcassets */; };
+		2BADA38D2B26E775005D9B36 /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = 2BADA38C2B26E775005D9B36 /* Alamofire */; };
+		2BADA38F2B26E7B5005D9B36 /* OpenAIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BADA38E2B26E7B5005D9B36 /* OpenAIService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -20,6 +22,7 @@
 		2B8D93E22B20591A002C2697 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2B8D93E52B20591A002C2697 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		2B8D93E72B20591A002C2697 /* SimpleChatForMac.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SimpleChatForMac.entitlements; sourceTree = "<group>"; };
+		2BADA38E2B26E7B5005D9B36 /* OpenAIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -27,6 +30,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2BADA38D2B26E775005D9B36 /* Alamofire in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -54,6 +58,7 @@
 			children = (
 				2B8D93DE2B205919002C2697 /* SimpleChatForMacApp.swift */,
 				2B8D93E02B205919002C2697 /* ContentView.swift */,
+				2BADA38E2B26E7B5005D9B36 /* OpenAIService.swift */,
 				2B8D93E22B20591A002C2697 /* Assets.xcassets */,
 				2B8D93E72B20591A002C2697 /* SimpleChatForMac.entitlements */,
 				2B8D93E42B20591A002C2697 /* Preview Content */,
@@ -85,6 +90,9 @@
 			dependencies = (
 			);
 			name = SimpleChatForMac;
+			packageProductDependencies = (
+				2BADA38C2B26E775005D9B36 /* Alamofire */,
+			);
 			productName = SimpleChatForMac;
 			productReference = 2B8D93DB2B205919002C2697 /* SimpleChatForMac.app */;
 			productType = "com.apple.product-type.application";
@@ -113,6 +121,9 @@
 				Base,
 			);
 			mainGroup = 2B8D93D22B205919002C2697;
+			packageReferences = (
+				2BADA38B2B26E775005D9B36 /* XCRemoteSwiftPackageReference "Alamofire" */,
+			);
 			productRefGroup = 2B8D93DC2B205919002C2697 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -141,6 +152,7 @@
 			files = (
 				2B8D93E12B205919002C2697 /* ContentView.swift in Sources */,
 				2B8D93DF2B205919002C2697 /* SimpleChatForMacApp.swift in Sources */,
+				2BADA38F2B26E7B5005D9B36 /* OpenAIService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -341,6 +353,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		2BADA38B2B26E775005D9B36 /* XCRemoteSwiftPackageReference "Alamofire" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Alamofire/Alamofire.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.8.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		2BADA38C2B26E775005D9B36 /* Alamofire */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2BADA38B2B26E775005D9B36 /* XCRemoteSwiftPackageReference "Alamofire" */;
+			productName = Alamofire;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 2B8D93D32B205919002C2697 /* Project object */;
 }
