@@ -301,7 +301,7 @@ struct DetailView: View {
                     // 复制聊天记录
                     SFButtonView(imageSystemName: "square.on.square") {
                         var textResult: String = ""
-                        for message in vm.selectedChat?.messages ?? [] {
+                        for message in vm.selectedChat?.messages.filter({ $0.role != .system }) ?? [] {
                             textResult += message.role == .assistant ? "\n\(message.content)\n\n" : "\(message.content)\n"
                         }
                         copyToClipboard(text: textResult)
