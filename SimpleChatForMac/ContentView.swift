@@ -177,7 +177,7 @@ struct SidebarView: View {
                 Spacer()
                 Button {
                     vm.chats.insert(Chat(title: "新的聊天", messages: [Message(content: "请始终使用简体中文回答我。", role: .system)]), at: 0)
-                    vm.selectedChat = vm.chats[0]
+                    vm.selectedChat = vm.chats.first
                     vm.saveChats()
                 } label: {
                     Text("新建聊天")
@@ -301,10 +301,13 @@ struct DetailView: View {
                     // 复制聊天记录
                     SFButtonView(imageSystemName: "square.on.square") {
                         var textResult: String = ""
-                        for message in vm.selectedChat?.messages.filter({ $0.role != .system }) ?? [] {
-                            textResult += message.role == .assistant ? "\n\(message.content)\n\n" : "\(message.content)\n"
+                        
+                        if let index = vm.chats.firstIndex(where: { $0.id == vm.selectedChat?.id }) {
+                            for message in vm.chats[index].messages.filter({ $0.role != .system }) {
+                                textResult += message.role == .assistant ? "\n\(message.content)\n\n" : "\(message.content)\n"
+                            }
+                            copyToClipboard(text: textResult)
                         }
-                        copyToClipboard(text: textResult)
                     }
                     // 滚动到顶部
                     SFButtonView(imageSystemName: "arrow.up.to.line.compact") {
