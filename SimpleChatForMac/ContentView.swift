@@ -122,7 +122,7 @@ struct SidebarView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 16) {
                         ForEach(vm.chats.indices, id: \.self) { chatIndex in
-                            Text("\(vm.chats[chatIndex].title)(\(vm.chats[chatIndex].messages.count)条)")
+                            Text("\(vm.chats[chatIndex].title)(\(vm.chats[chatIndex].messages.filter({$0.role != .system}).count)条)")
                                 .padding()
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(vm.selectedChat?.id == vm.chats[chatIndex].id ? Color.accentColor.opacity(0.1) : Color(.systemGray).opacity(0.1))
@@ -214,7 +214,7 @@ struct DetailView: View {
             ScrollViewReader { proxy in
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .trailing, spacing: 20) {
-                        ForEach(vm.getCurChatMessages().filter({$0.role != .system})) { message in
+                        ForEach(vm.getCurChatMessages()) { message in
                             HStack {
                                 if message.role == .user {
                                     Spacer()
@@ -347,9 +347,10 @@ struct DetailView: View {
                         .textEditorStyle(.plain)
                         .font(.body)
                         .padding(6)
-                        .frame(height: 80)
+                        .frame(minHeight: 48, maxHeight: 200)
                         .background(Color(.systemGray).opacity(0.1))
                         .cornerRadius(10)
+                        .fixedSize(horizontal: false, vertical: true)
                     Button(action: {
                         Task {
                             vm.sendMessage()
@@ -500,7 +501,7 @@ class ViewModel: ObservableObject {
     
     func getCurChatMessages() -> [Message] {
         if let index = chats.firstIndex(where: {$0.id == selectedChat?.id}) {
-            return chats[index].messages
+            return chats[index].messages.filter({ $0.role != .system })
         } else {
             return []
         }
@@ -593,10 +594,6 @@ class ViewModel: ObservableObject {
             }
         }
     }
-    
-    
-    
-    
 }
 
 struct Chat: Identifiable, Codable, Equatable {
