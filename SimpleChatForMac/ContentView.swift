@@ -228,7 +228,6 @@ struct DetailView: View {
                                         .padding()
                                         .background(message.role == .user ? Color(.systemGray).opacity(0.1) : Color.accentColor.opacity(0.1))
                                         .cornerRadius(10)
-                                        .id(message.id)
                                         .contextMenu {
                                             VStack {
                                                 Button {
@@ -261,6 +260,8 @@ struct DetailView: View {
                                     Spacer()
                                 }
                             }
+                            .id(message.id)
+                            .padding(.bottom, 10)
                         }
                     }
                     .padding()
