@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2B7DA2CD2B39344900E3A521 /* OpenAI in Frameworks */ = {isa = PBXBuildFile; productRef = 2B7DA2CC2B39344900E3A521 /* OpenAI */; };
 		2B8D93DF2B205919002C2697 /* SimpleChatForMacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B8D93DE2B205919002C2697 /* SimpleChatForMacApp.swift */; };
 		2B8D93E12B205919002C2697 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B8D93E02B205919002C2697 /* ContentView.swift */; };
 		2B8D93E32B20591A002C2697 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2B8D93E22B20591A002C2697 /* Assets.xcassets */; };
@@ -30,6 +31,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2B7DA2CD2B39344900E3A521 /* OpenAI in Frameworks */,
 				2BADA38D2B26E775005D9B36 /* Alamofire in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -92,6 +94,7 @@
 			name = SimpleChatForMac;
 			packageProductDependencies = (
 				2BADA38C2B26E775005D9B36 /* Alamofire */,
+				2B7DA2CC2B39344900E3A521 /* OpenAI */,
 			);
 			productName = SimpleChatForMac;
 			productReference = 2B8D93DB2B205919002C2697 /* SimpleChatForMac.app */;
@@ -123,6 +126,7 @@
 			mainGroup = 2B8D93D22B205919002C2697;
 			packageReferences = (
 				2BADA38B2B26E775005D9B36 /* XCRemoteSwiftPackageReference "Alamofire" */,
+				2B7DA2CB2B39344900E3A521 /* XCRemoteSwiftPackageReference "OpenAI" */,
 			);
 			productRefGroup = 2B8D93DC2B205919002C2697 /* Products */;
 			projectDirPath = "";
@@ -359,6 +363,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		2B7DA2CB2B39344900E3A521 /* XCRemoteSwiftPackageReference "OpenAI" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/MacPaw/OpenAI";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.2.5;
+			};
+		};
 		2BADA38B2B26E775005D9B36 /* XCRemoteSwiftPackageReference "Alamofire" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/Alamofire/Alamofire.git";
@@ -370,6 +382,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		2B7DA2CC2B39344900E3A521 /* OpenAI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2B7DA2CB2B39344900E3A521 /* XCRemoteSwiftPackageReference "OpenAI" */;
+			productName = OpenAI;
+		};
 		2BADA38C2B26E775005D9B36 /* Alamofire */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 2BADA38B2B26E775005D9B36 /* XCRemoteSwiftPackageReference "Alamofire" */;

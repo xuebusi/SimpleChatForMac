@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import OpenAI
 
 struct ContentView: View {
     var body: some View {
@@ -176,7 +177,7 @@ struct SidebarView: View {
                 
                 Spacer()
                 Button {
-                    vm.chats.insert(Chat(title: "新的聊天", messages: [Message(content: "请始终使用简体中文回答我。", role: .system)]), at: 0)
+                    vm.chats.insert(SimpleChat(title: "新的聊天", messages: [SimpleMessage(content: "请始终使用简体中文回答我。", role: .system)]), at: 0)
                     vm.selectedChat = vm.chats.first
                     vm.saveChats()
                 } label: {
@@ -271,13 +272,8 @@ struct DetailView: View {
                             proxy.scrollTo(vm.getCurChatMessages().last?.id, anchor: .bottom)
                         }
                     }
-                    .onChange(of: vm.getCurChatMessages().count) { oldValue, newValue in
-                        DispatchQueue.main.async {
-                            if newValue > oldValue {
-                                print("当前消息数量变化")
-                                proxy.scrollTo(vm.getCurChatMessages().last?.id, anchor: .bottom)
-                            }
-                        }
+                    .onChange(of: vm.getCurChatMessages()) { _, _ in
+                        proxy.scrollTo(vm.getCurChatMessages().last?.id, anchor: .bottom)
                     }
                     .onChange(of: vm.selectedChat?.id) { _, _ in
                         DispatchQueue.main.async {
@@ -296,9 +292,6 @@ struct DetailView: View {
             VStack(alignment: .leading, spacing: 10) {
                 // 工具栏
                 HStack(spacing: 12) {
-                    SFButtonView(imageSystemName: "mic") {
-                        print("开始录音")
-                    }
                     // 复制聊天记录
                     SFButtonView(imageSystemName: "square.on.square") {
                         var textResult: String = ""
@@ -357,7 +350,7 @@ struct DetailView: View {
                         .fixedSize(horizontal: false, vertical: true)
                     Button(action: {
                         Task {
-                            vm.sendMessage()
+                            try await vm.sendMessage()
                         }
                     }, label: {
                         Text("发送")
@@ -365,7 +358,7 @@ struct DetailView: View {
                     })
                     .buttonStyle(.borderedProminent)
                     .tint(Color.accentColor)
-                    .disabled(vm.isReceiving)
+                    .disabled(vm.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
             .padding([.horizontal, .bottom])
@@ -440,6 +433,7 @@ struct SFButtonView: View {
     }
 }
 
+@MainActor
 class ViewModel: ObservableObject {
     @Published var inputText: String = ""
     @Published var isTitleEditable: Bool = false
@@ -451,13 +445,13 @@ class ViewModel: ObservableObject {
     
     private let openAIService = OpenAIService()
     
-    @Published var selectedChat: Chat? = nil {
+    @Published var selectedChat: SimpleChat? = nil {
         didSet {
             saveSelectedChat()
         }
     }
     
-    @Published var chats: [Chat] = [] {
+    @Published var chats: [SimpleChat] = [] {
         didSet {
             saveChats()
         }
@@ -467,7 +461,7 @@ class ViewModel: ObservableObject {
         loadChats()
         loadSelectedChat()
         
-        //        clearData()
+        // clearData()
     }
     
     private func clearData() {
@@ -476,10 +470,12 @@ class ViewModel: ObservableObject {
     }
     
     func loadSelectedChat() {
-        if let data = UserDefaults.standard.data(forKey: "selectedChat"),
-           let decodedData = try? JSONDecoder().decode(Chat.self, from: data) {
-            selectedChat = decodedData
-        }
+            if let data = UserDefaults.standard.data(forKey: "selectedChat"),
+               let decodedData = try? JSONDecoder().decode(SimpleChat.self, from: data) {
+                DispatchQueue.main.async {
+                    self.selectedChat = decodedData
+                }
+            }
     }
     
     func saveSelectedChat() {
@@ -491,8 +487,10 @@ class ViewModel: ObservableObject {
     
     func loadChats() {
         if let data = UserDefaults.standard.data(forKey: "chats"),
-           let decodedData = try? JSONDecoder().decode([Chat].self, from: data) {
-            chats = decodedData
+           let decodedData = try? JSONDecoder().decode([SimpleChat].self, from: data) {
+            DispatchQueue.main.async {
+                self.chats = decodedData
+            }
         }
     }
     
@@ -503,7 +501,7 @@ class ViewModel: ObservableObject {
         }
     }
     
-    func getCurChatMessages() -> [Message] {
+    func getCurChatMessages() -> [SimpleMessage] {
         if let index = chats.firstIndex(where: {$0.id == selectedChat?.id}) {
             return chats[index].messages.filter({ $0.role != .system })
         } else {
@@ -512,7 +510,7 @@ class ViewModel: ObservableObject {
     }
     
     // 删除聊天
-    func removeChat(chat: Chat) {
+    func removeChat(chat: SimpleChat) {
         if let index = chats.firstIndex(where: { $0.id == chat.id }) {
             chats.remove(at: index)
             saveChats()
@@ -528,27 +526,7 @@ class ViewModel: ObservableObject {
         }
     }
     
-    // 发送消息
-    func sendMessage() {
-        if inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            print("消息不能为空")
-            errorMessage = "消息不能为空"
-            showErrorMessage = true
-            return
-        }
-        
-        guard let index = chats.firstIndex(where: {$0.id == selectedChat?.id}) else {
-            print("聊天对象不存在")
-            errorMessage = "聊天对象不存在"
-            showErrorMessage = true
-            return
-        }
-        
-        let newMessage = Message(content: inputText, role: .user)
-        chats[index].messages.append(newMessage)
-        inputText = ""
-        isReceiving = true
-        
+    func sendMessage() async throws {
         guard let apiKey = UserDefaults.standard.string(forKey: "apiKey") else {
             print("请先设置API秘钥！")
             errorMessage = "请先设置API秘钥！"
@@ -565,52 +543,137 @@ class ViewModel: ObservableObject {
             return
         }
         
-        Task {
-            let result = await openAIService.sendMessage(messages: chats[index].messages, apiKey: apiKey)
-            switch (result) {
-            case .success(let response):
-                guard let receivedOpenAIMessage = response.choices.first?.message else {
-                    print("没有收到消息")
-                    errorMessage = "没有收到消息"
-                    showErrorMessage = true
-                    isReceiving = false
-                    return
-                }
-                let receiveMessage = Message(content: receivedOpenAIMessage.content, role: receivedOpenAIMessage.role)
-                
-                await MainActor.run {
-                    chats[index].messages.append(receiveMessage)
-                    isReceiving = false
-                }
-            case .failure(CustomError.error_info(let errorMsg)):
-                await MainActor.run {
-                    isReceiving = false
-                    errorMessage = errorMsg
-                    showErrorMessage = true
+        let openAI = OpenAI(apiToken: apiKey)
+        
+        guard let index = chats.firstIndex(where: {$0.id == selectedChat?.id}) else {
+            print("聊天对象不存在")
+            errorMessage = "聊天对象不存在"
+            showErrorMessage = true
+            return
+        }
+        
+        let newMessage = SimpleMessage(content: inputText, role: .user)
+        
+        chats[index].messages.append(newMessage)
+        inputText = ""
+        
+        let chats = [
+            Chat(role: .system, content: "你是一个SwiftUI专家，请始终使用中文回答我。"),
+            Chat(role: .user, content: newMessage.content),
+        ]
+        
+        let query = ChatQuery(model: .gpt3_5Turbo, messages: chats)
+        
+        openAI.chatsStream(query: query) { partialResult in
+            switch partialResult {
+            case .success(let result):
+                DispatchQueue.main.async {
+                    if let lastMessage = self.chats[index].messages.last, lastMessage.role == .assistant {
+                        self.chats[index].messages[self.chats[index].messages.count - 1].content += result.choices[0].delta.content ?? ""
+                    } else {
+                        self.chats[index].messages.append(SimpleMessage(content: result.choices[0].delta.content ?? "", role: .assistant))
+                    }
                 }
             case .failure(let error):
-                await MainActor.run {
-                    print(error.localizedDescription)
-                    isReceiving = false
-                    errorMessage = "网络错误，请检查网络连接！"
-                    showErrorMessage = true
-                }
+                //Handle chunk error here
+                print(error.localizedDescription)
+                self.errorMessage = error.localizedDescription
+                self.showErrorMessage = true
+            }
+        } completion: { error in
+            //Handle streaming error here
+            if let streamingError = error {
+                self.errorMessage = "流错误：\(streamingError.localizedDescription)"
+                self.showErrorMessage = true
             }
         }
     }
+    
+    // 发送消息
+    /**
+     func sendMessage() {
+         if inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+             print("消息不能为空")
+             errorMessage = "消息不能为空"
+             showErrorMessage = true
+             return
+         }
+         
+         guard let index = chats.firstIndex(where: {$0.id == selectedChat?.id}) else {
+             print("聊天对象不存在")
+             errorMessage = "聊天对象不存在"
+             showErrorMessage = true
+             return
+         }
+         
+         let newMessage = SimpleMessage(content: inputText, role: .user)
+         chats[index].messages.append(newMessage)
+         inputText = ""
+         isReceiving = true
+         
+         guard let apiKey = UserDefaults.standard.string(forKey: "apiKey") else {
+             print("请先设置API秘钥！")
+             errorMessage = "请先设置API秘钥！"
+             showErrorMessage = true
+             isReceiving = false
+             return
+         }
+         
+         if apiKey.isEmpty {
+             print("请先设置API秘钥！")
+             errorMessage = "请先配置API密钥！"
+             showErrorMessage = true
+             isReceiving = false
+             return
+         }
+         
+         Task {
+             let result = await openAIService.sendMessage(messages: chats[index].messages, apiKey: apiKey)
+             switch (result) {
+             case .success(let response):
+                 guard let receivedOpenAIMessage = response.choices.first?.message else {
+                     print("没有收到消息")
+                     errorMessage = "没有收到消息"
+                     showErrorMessage = true
+                     isReceiving = false
+                     return
+                 }
+                 let receiveMessage = SimpleMessage(content: receivedOpenAIMessage.content, role: receivedOpenAIMessage.role)
+                 
+                 await MainActor.run {
+                     chats[index].messages.append(receiveMessage)
+                     isReceiving = false
+                 }
+             case .failure(CustomError.error_info(let errorMsg)):
+                 await MainActor.run {
+                     isReceiving = false
+                     errorMessage = errorMsg
+                     showErrorMessage = true
+                 }
+             case .failure(let error):
+                 await MainActor.run {
+                     print(error.localizedDescription)
+                     isReceiving = false
+                     errorMessage = "网络错误，请检查网络连接！"
+                     showErrorMessage = true
+                 }
+             }
+         }
+     }
+     */
 }
 
-struct Chat: Identifiable, Codable, Equatable {
+struct SimpleChat: Identifiable, Codable, Equatable {
     var id: String = UUID().uuidString
     var title: String
-    var messages: [Message]
+    var messages: [SimpleMessage]
 }
 
-struct Message: Identifiable, Codable, Equatable {
+struct SimpleMessage: Identifiable, Codable, Equatable {
     var id: String = UUID().uuidString
     var createTime: Date = .init()
-    let content: String
-    let role: SenderRole
+    var content: String
+    let role: Chat.Role
 }
 
 // 日期格式化

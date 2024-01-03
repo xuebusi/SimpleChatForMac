@@ -6,12 +6,13 @@
 //
 
 import Alamofire
+import OpenAI
 
 class OpenAIService {
     private let endpointUrl = "https://api.openai.com/v1/chat/completions"
     
     /// 发送消息
-    func sendMessage(messages: [Message], apiKey: String? = "") async -> Result<OpenAIChatResponse, Error> {
+    func sendMessage(messages: [SimpleMessage], apiKey: String? = "") async -> Result<OpenAIChatResponse, Error> {
         guard let _ = apiKey else {
             return .failure(CustomError.error_info("请先配置密钥！"))
         }
@@ -76,15 +77,15 @@ struct OpenAIChatBody: Encodable {
 }
 
 struct OpenAIChatMessage: Codable {
-    let role: SenderRole
+    let role: Chat.Role
     let content: String
 }
 
-enum SenderRole: String, Codable {
-    case system
-    case user
-    case assistant
-}
+//enum SenderRole: String, Codable {
+//    case system
+//    case user
+//    case assistant
+//}
 
 struct OpenAIChatResponse: Decodable {
     let choices: [OpenAIChatChoice]
